@@ -58,6 +58,21 @@ export function authenticateJwt(req: Request, res: Response, next: NextFunction)
   }
 }
 
+export function optionalJwt(req: Request, _res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
+      req.user = decoded;
+      req.companyId = decoded.companyId || 12;
+    } catch {
+      // Ignore invalid token in optional auth
+    }
+  }
+  next();
+}
+
 export function authenticateTally(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

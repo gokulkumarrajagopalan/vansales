@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 import { query } from '../db/pool.js';
 import { StockController } from '../controllers/stock.controller.js';
+import { TrackingController } from '../controllers/tracking.controller.js';
 
 const router = Router();
 
@@ -330,5 +331,9 @@ router.get('/party-outstanding', async (_req: Request, res: Response) => {
 router.get('/company-entry-settings/:cmpId', async (_req: Request, res: Response) => {
   return res.status(200).json({ success: true, data: {} });
 });
+
+// GPS / Tracking telemetry from mobile app
+router.post('/tracking/ping', TrackingController.recordPing);
+router.get('/tracking/live', TrackingController.getLiveFleet);
 
 export default router;

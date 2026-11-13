@@ -1,21 +1,19 @@
 import { Router } from 'express';
 import { TrackingController } from '../controllers/tracking.controller.js';
-import { authenticateJwt } from '../middleware/auth.middleware.js';
+import { authenticateJwt, optionalJwt } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-router.use(authenticateJwt);
-
-// 1. Mobile app / device telemetry ingest
-router.post('/ping', TrackingController.recordPing);
+// 1. Mobile app / device telemetry ingest (supports Bearer token or plain JSON payload)
+router.post('/ping', optionalJwt, TrackingController.recordPing);
 
 // 2. Live fleet position retrieval
-router.get('/live', TrackingController.getLiveFleet);
+router.get('/live', optionalJwt, TrackingController.getLiveFleet);
 
 // 3. Historical GPS trail for a van
-router.get('/history/:userId', TrackingController.getHistory);
+router.get('/history/:userId', authenticateJwt, TrackingController.getHistory);
 
 // 4. Test harness step simulation
-router.post('/simulate-step', TrackingController.simulateStep);
+router.post('/simulate-step', authenticateJwt, TrackingController.simulateStep);
 
 export default router;

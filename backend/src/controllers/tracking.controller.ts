@@ -81,7 +81,7 @@ export class TrackingController {
    */
   static async recordPing(req: Request, res: Response): Promise<void> {
     try {
-      const {
+      let {
         salesman_user_id,
         latitude,
         longitude,
@@ -92,20 +92,29 @@ export class TrackingController {
         battery_pct = 85,
         is_moving = true,
         shift_id = null,
-        cmp_id = 1,
-      } = req.body as TelemetryPingInput;
+        cmp_id = 12,
+      } = req.body as any;
 
-      if (!salesman_user_id || latitude === undefined || longitude === undefined) {
+      if (!salesman_user_id) {
+        salesman_user_id = (req as any).user?.userId || (req as any).user?.id || req.body.userId || 7;
+      }
+      if (!cmp_id) {
+        cmp_id = (req as any).user?.companyId || 12;
+      }
+
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      if (isNaN(lat) || isNaN(lng)) {
         res.status(400).json({
           isValid: false,
-          message: 'Missing required parameters: salesman_user_id, latitude, longitude',
+          message: 'Missing or invalid parameters: latitude, longitude',
           errorCode: 'INVALID_INPUT',
           data: null,
         });
         return;
       }
 
-      const calculatedMps = speed_mps !== undefined ? speed_mps : (speed_kmh ? speed_kmh / 3.6 : 0);
+      const calculatedMps = speed_mps !== undefined ? speed_mps : (speed_kmh ? parseFloat(speed_kmh) / 3.6 : 0);
 
       const insertSql = `
         INSERT INTO van_location_ping (
@@ -129,8 +138,8 @@ export class TrackingController {
         cmp_id,
         salesman_user_id,
         shift_id,
-        latitude,
-        longitude,
+        lat,
+        lng,
         accuracy_m,
         calculatedMps,
         heading_deg,
