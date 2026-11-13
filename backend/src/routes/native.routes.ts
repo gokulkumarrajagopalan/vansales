@@ -152,12 +152,77 @@ router.get('/vouchers/mine/van-stock', StockController.getVanStock);
 
 router.post('/vouchers/entry', async (req: Request, res: Response) => {
   try {
+    const {
+      companyId,
+      voucherType,
+      date,
+      partyLedgerName,
+      amount,
+      narration,
+      reference,
+      lineItems,
+      paymentMode,
+    } = req.body;
+
+    const cmpId = Number(companyId) || 12;
+    const vType = voucherType || 'Sales';
+    const vDate = date || new Date().toISOString().slice(0, 10);
+    const vNumber = (reference || `VCH-${Date.now()}`).trim();
+    const vAmount = Number(amount) || 0;
+    const party = partyLedgerName || 'Cash in Hand';
+    const desc = narration || `${vType} Voucher ${vNumber} for ${party}`;
+    const guid = `MOB-${cmpId}-${Date.now()}`;
+
+    // Upsert into vouchers table
+    const vRes = await query(
+      `INSERT INTO public.vouchers (
+         voucher_number, voucher_type, date, total_amount, narration, tally_sync_status, tally_guid
+       )
+       VALUES ($1, $2, $3::date, $4, $5, 'synced', $6)
+       ON CONFLICT (voucher_number) DO UPDATE
+       SET total_amount = EXCLUDED.total_amount,
+           narration = EXCLUDED.narration,
+           tally_sync_status = 'synced'
+       RETURNING id`,
+      [vNumber, vType, vDate, vAmount, desc, guid]
+    );
+
+    const voucherId = vRes.rows[0]?.id ? parseInt(vRes.rows[0].id, 10) : null;
+
+    if (voucherId && Array.isArray(lineItems) && lineItems.length > 0) {
+      for (const item of lineItems) {
+        const iName = item.itemName || 'Stock Item';
+        const iQty = parseFloat(item.qty) || 1;
+        const iRate = parseFloat(item.rate) || 0;
+        const iAmt = parseFloat(item.amount) || (iQty * iRate);
+        await query(
+          `INSERT INTO public.voucher_inventory_entries (
+             voucher_id, cmp_id, stock_item_name, godown_name, actual_qty, billed_qty,
+             uom, rate, discount, amount, voucher_guid, voucher_number, voucher_type,
+             voucher_date, created_at
+           )
+           VALUES ($1, $2, $3, 'Van 01 Godown', $4, $4, 'Nos', $5, 0, $6, $7, $8, $9, $10::date, CURRENT_TIMESTAMP)`,
+          [voucherId, cmpId, iName, iQty, iRate, iAmt, guid, vNumber, vType, vDate]
+        );
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      message: 'Voucher saved',
-      data: { id: Date.now(), voucherNumber: `VCH-${Date.now()}` },
+      message: 'Voucher saved to server successfully',
+      id: voucherId || Date.now(),
+      voucherNumber: vNumber,
+      guid,
+      syncStatus: 'synced',
+      data: {
+        id: voucherId || Date.now(),
+        voucherNumber: vNumber,
+        guid,
+        syncStatus: 'synced',
+      },
     });
   } catch (err: any) {
+    console.error('[Voucher Entry Error]', err);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
