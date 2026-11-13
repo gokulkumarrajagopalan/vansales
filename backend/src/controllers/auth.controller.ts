@@ -72,10 +72,28 @@ export class AuthController {
 
       return res.status(200).json({
         isValid: true,
+        success: true,
         message: 'Login successful',
         errorCode: null,
+        token,
+        deviceToken: '',
+        userId: Number(user.userid),
+        loginId: user.username,
+        username: user.username,
+        fullName: user.full_name,
+        role: user.role || 'VAN_REP',
+        licenceNo: user.licence_no ? String(user.licence_no) : '',
+        mobile: user.mobile,
         data: {
           token,
+          deviceToken: '',
+          userId: Number(user.userid),
+          loginId: user.username,
+          username: user.username,
+          fullName: user.full_name,
+          role: user.role || 'VAN_REP',
+          mobile: user.mobile,
+          licenceNo: user.licence_no ? String(user.licence_no) : '',
           user: {
             id: user.userid,
             username: user.username,

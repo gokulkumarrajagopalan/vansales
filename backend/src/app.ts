@@ -19,6 +19,7 @@ import productRoutes from './routes/product.routes.js';
 import advisoryRoutes from './routes/advisory.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import trackingRoutes from './routes/tracking.routes.js';
+import nativeRoutes from './routes/native.routes.js';
 
 export const app = express();
 
@@ -58,6 +59,7 @@ app.use('/TallyIntegration', tallyRoutes);
 app.use('/api/tally', tallyRoutes);
 
 // 2. Mobile & Web App Internal APIs
+app.use('/api', nativeRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/shifts', shiftRoutes);
 app.use('/api/v1/customers', customerRoutes);
