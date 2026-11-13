@@ -5,8 +5,8 @@ export class StockController {
   static async getVanStock(req: Request, res: Response) {
     try {
       const companyId = req.companyId || 12;
-      const user = req.user!;
-      const godownName = (req.query.godownName as string) || user.godownName || 'Van 01 Godown';
+      const user = req.user;
+      const godownName = (req.query.godownName as string) || user?.godownName || 'Van 01 Godown';
 
       // Pull stock items with catalog details (prioritize priced FMCG items, ensure non-zero defaults)
       const resStock = await query(

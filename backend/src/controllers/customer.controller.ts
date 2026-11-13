@@ -132,4 +132,76 @@ export class CustomerController {
       });
     }
   }
+
+  static async createCustomer(req: Request, res: Response) {
+    try {
+      const companyId = req.companyId || 12;
+      const {
+        name,
+        storeName,
+        phone,
+        mobile,
+        address,
+        state,
+        country,
+        trn,
+      } = req.body;
+
+      const custName = (name || storeName || '').trim();
+      if (!custName) {
+        return res.status(400).json({ isValid: false, message: 'Customer name is required', data: null });
+      }
+
+      const custPhone = phone || mobile || '';
+      const custAddress = address || '';
+      const custState = state || 'Karnataka';
+      const custCountry = country || 'India';
+      const custTrn = trn || '';
+
+      const grpRes = await query(
+        `SELECT grpid FROM public.groups WHERE cmpid = $1 AND (grp_name ILIKE '%Debtor%' OR grp_name ILIKE '%Customer%') LIMIT 1`,
+        [companyId]
+      );
+      const grpId = grpRes.rows.length > 0 ? grpRes.rows[0].grpid : null;
+
+      const maxMasterRes = await query(
+        `SELECT COALESCE(MAX(masterid), 600) + 1 as next_id FROM public.ledgers WHERE cmpid = $1`,
+        [companyId]
+      );
+      const nextMasterId = parseInt(maxMasterRes.rows[0].next_id, 10);
+      const guid = `LED-CMP${companyId}-${nextMasterId}`;
+
+      const insRes = await query(
+        `INSERT INTO public.ledgers (
+           userid, cmpid, masterid, guid, grpid, led_name, led_parent, led_primary_group,
+           led_opening_balance, led_closing_balance, led_billwise_on, is_active, is_deleted,
+           led_mobile, led_email, led_address_1, led_state, led_country, vat_tin_number, sync_status, created_at, updated_at
+         )
+         VALUES (
+           $1, $2, $3, $4, $5, $6, 'Sundry Debtors', 'Current Assets',
+           0.00, 0.00, true, true, false,
+           $7, '', $8, $9, $10, $11, 'SYNCED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+         )
+         ON CONFLICT (cmpid, led_name) DO UPDATE
+         SET led_mobile = EXCLUDED.led_mobile,
+             led_address_1 = EXCLUDED.led_address_1,
+             vat_tin_number = EXCLUDED.vat_tin_number,
+             updated_at = CURRENT_TIMESTAMP
+         RETURNING ledid, led_name`,
+        [req.user?.userId || 5, companyId, nextMasterId, guid, grpId, custName, custPhone, custAddress, custState, custCountry, custTrn]
+      );
+
+      return res.status(201).json({
+        isValid: true,
+        message: 'Customer created successfully',
+        data: {
+          id: insRes.rows[0].ledid,
+          name: insRes.rows[0].led_name,
+        },
+      });
+    } catch (err: any) {
+      console.error('[Create Customer Error]', err);
+      return res.status(500).json({ isValid: false, message: err.message, data: null });
+    }
+  }
 }

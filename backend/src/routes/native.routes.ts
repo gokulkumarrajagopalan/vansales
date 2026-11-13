@@ -81,6 +81,94 @@ router.get('/ledgers/company/:companyId', async (req: Request, res: Response) =>
   }
 });
 
+// 3b. Create Customer / Ledger (Sync from Mobile & Web)
+router.post(['/customers', '/ledgers'], async (req: Request, res: Response) => {
+  try {
+    const {
+      companyId,
+      name,
+      storeName,
+      phone,
+      mobile,
+      mobileNumber,
+      address,
+      address1,
+      city,
+      state,
+      emirate,
+      country,
+      trn,
+      vatTinNumber,
+      creditLimit,
+    } = req.body;
+
+    const cmpId = Number(companyId) || 12;
+    const custName = (name || storeName || '').trim();
+    if (!custName) {
+      return res.status(400).json({ success: false, message: 'Customer or store name is required' });
+    }
+
+    const custPhone = phone || mobile || mobileNumber || '';
+    const custAddress = address || address1 || '';
+    const custState = state || emirate || 'Karnataka';
+    const custCountry = country || 'India';
+    const custTrn = trn || vatTinNumber || '';
+
+    // Find Debtors Group
+    const grpRes = await query(
+      `SELECT grpid FROM public.groups WHERE cmpid = $1 AND (grp_name ILIKE '%Debtor%' OR grp_name ILIKE '%Customer%') LIMIT 1`,
+      [cmpId]
+    );
+    const grpId = grpRes.rows.length > 0 ? grpRes.rows[0].grpid : null;
+
+    // Get Next Master ID
+    const maxMasterRes = await query(
+      `SELECT COALESCE(MAX(masterid), 600) + 1 as next_id FROM public.ledgers WHERE cmpid = $1`,
+      [cmpId]
+    );
+    const nextMasterId = parseInt(maxMasterRes.rows[0].next_id, 10);
+    const guid = `LED-CMP${cmpId}-${nextMasterId}`;
+
+    const insRes = await query(
+      `INSERT INTO public.ledgers (
+         userid, cmpid, masterid, guid, grpid, led_name, led_parent, led_primary_group,
+         led_opening_balance, led_closing_balance, led_billwise_on, is_active, is_deleted,
+         led_mobile, led_email, led_address_1, led_state, led_country, vat_tin_number, sync_status, created_at, updated_at
+       )
+       VALUES (
+         5, $1, $2, $3, $4, $5, 'Sundry Debtors', 'Current Assets',
+         0.00, 0.00, true, true, false,
+         $6, '', $7, $8, $9, $10, 'SYNCED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+       )
+       ON CONFLICT (cmpid, led_name) DO UPDATE
+       SET led_mobile = EXCLUDED.led_mobile,
+           led_address_1 = EXCLUDED.led_address_1,
+           vat_tin_number = EXCLUDED.vat_tin_number,
+           updated_at = CURRENT_TIMESTAMP
+       RETURNING ledid, led_name`,
+      [cmpId, nextMasterId, guid, grpId, custName, custPhone, custAddress, custState, custCountry, custTrn]
+    );
+
+    const ledId = insRes.rows[0].ledid;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Customer saved to cloud database successfully',
+      id: ledId,
+      name: custName,
+      data: {
+        id: ledId,
+        name: custName,
+        phone: custPhone,
+        address: custAddress,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Create Customer Error]', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 4. Stock Items
 router.get('/stock-items/company/:companyId', async (req: Request, res: Response) => {
   try {
