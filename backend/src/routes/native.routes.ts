@@ -85,7 +85,7 @@ router.get('/stock-items/company/:companyId', async (req: Request, res: Response
   try {
     const cmpId = parseInt(req.params.companyId, 10) || 12;
     const r = await query(
-      `SELECT stockitem_id as id, name, category, group_name as "stockGroup",
+      `SELECT stockitem_id as id, name, category, parent as "stockGroup",
               COALESCE(base_units, 'Nos') as "baseUnits",
               COALESCE(opening_balance, 50.00) as "openingBalance",
               COALESCE(opening_rate, 25.00) as rate
