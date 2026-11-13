@@ -74,9 +74,10 @@ router.get('/ledgers/company/:companyId', async (req: Request, res: Response) =>
       success: true,
       data: r.rows,
       content: r.rows,
+      ledgers: r.rows,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message, data: [] });
+    return res.status(500).json({ success: false, message: err.message, data: [], ledgers: [] });
   }
 });
 
@@ -98,9 +99,10 @@ router.get('/stock-items/company/:companyId', async (req: Request, res: Response
       success: true,
       data: r.rows,
       content: r.rows,
+      stockItems: r.rows,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message, data: [] });
+    return res.status(500).json({ success: false, message: err.message, data: [], stockItems: [] });
   }
 });
 
