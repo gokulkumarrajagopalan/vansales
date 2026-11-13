@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Default URL: 10.0.2.2 for Android emulator, localhost for iOS/web
-const DEFAULT_HOST = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+const DEFAULT_HOST = 'http://66.116.232.161:8088';
 const OFFLINE_QUEUE_KEY = 'offline_sync_queue';
 
 export interface OfflineQueueItem {
