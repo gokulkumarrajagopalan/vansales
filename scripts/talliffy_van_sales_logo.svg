@@ -1,0 +1,168 @@
+
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Royal Blue Gradient (matches user uploaded logo #0E2E91) -->
+    <linearGradient id="bg-grad" x1="512" y1="0" x2="512" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#123EB4"/>
+      <stop offset="45%" stop-color="#0E2E91"/>
+      <stop offset="100%" stop-color="#082068"/>
+    </linearGradient>
+
+    <!-- Glass Windshield Gradient -->
+    <linearGradient id="glass-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#BAE6FD"/>
+      <stop offset="40%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+
+    <!-- Cyan Accent (matches Bar 4) -->
+    <linearGradient id="cyan-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#00BAF2"/>
+    </linearGradient>
+
+    <!-- Chrome / Rim Gradient -->
+    <linearGradient id="rim-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#94A3B8"/>
+    </linearGradient>
+
+    <!-- Deep Drop Shadow -->
+    <filter id="shadow-deep" x="160" y="480" width="720" height="380" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="14" flood-color="#030C28" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- 1. Deep Royal Blue Squircle Background -->
+  <!-- Curvature rx=224 matches exactly the squircle of uploaded image -->
+  <rect x="28" y="28" width="968" height="968" rx="224" fill="url(#bg-grad)"/>
+
+  <!-- 2. Tablet / Clipboard Outer Frame -->
+  <rect x="232" y="196" width="560" height="632" rx="68" stroke="#FFFFFF" stroke-width="34" fill="none"/>
+
+  <!-- Top Clip / Notch (Faithfully matching user's uploaded logo) -->
+  <path d="M 424 196 C 424 178 436 166 454 166 H 570 C 588 166 600 178 600 196 V 226 C 600 238 590 248 578 248 H 446 C 434 248 424 238 424 226 Z" fill="#FFFFFF"/>
+  <!-- Top notch interior slot -->
+  <rect x="462" y="192" width="100" height="14" rx="7" fill="#0E2E91"/>
+
+  <!-- 3. Four Growth Bars (Tally ERP & Accounting) -->
+  <!-- Bar 1 (Leftmost, Shortest) -->
+  <rect x="306" y="618" width="62" height="140" rx="16" fill="#FFFFFF"/>
+
+  <!-- Bar 2 (Medium) -->
+  <rect x="416" y="490" width="62" height="268" rx="16" fill="#FFFFFF"/>
+
+  <!-- Bar 3 (Tallest Growth Peak - Tally Performance) -->
+  <rect x="526" y="344" width="62" height="414" rx="16" fill="#FFFFFF"/>
+
+  <!-- Bar 4 (Electric Cyan Accent - matches user's uploaded logo) -->
+  <rect x="636" y="420" width="74" height="338" rx="16" fill="url(#cyan-grad)"/>
+
+  <!-- 4. Integrated Delivery Van in Foreground (Van Sales ERP) -->
+  <g filter="url(#shadow-deep)">
+    <!-- Ground Shadow Under Van / Resting on tablet base -->
+    <ellipse cx="512" cy="798" rx="272" ry="16" fill="#030C28" opacity="0.6"/>
+
+    <!-- Speed Streaks behind van (subtle white/cyan lines indicating active mobile delivery) -->
+    <rect x="204" y="620" width="46" height="8" rx="4" fill="#FFFFFF" opacity="0.65"/>
+    <rect x="180" y="642" width="60" height="8" rx="4" fill="#38BDF8" opacity="0.75"/>
+    <rect x="216" y="664" width="34" height="8" rx="4" fill="#FFFFFF" opacity="0.55"/>
+
+    <!-- Van Body: Smooth, Bold Aerodynamic Silhouette -->
+    <!-- Starts at rear x=252, roof y=552, front windshield slope down, bumper at x=768, wheel wells at (368, 762) and (668, 762) -->
+    <path d="
+      M 252 762
+      V 574
+      C 252 552 266 540 288 540
+      H 612
+      C 626 540 638 548 646 560
+      L 704 636
+      L 750 658
+      C 762 664 770 676 770 690
+      V 762
+      H 728
+      C 728 722 696 694 656 694
+      C 616 694 584 722 584 762
+      H 440
+      C 440 722 408 694 368 694
+      C 328 694 296 722 296 762
+      Z"
+      fill="#FFFFFF"
+    />
+
+    <!-- Van Windshield Glass (Angled Aerodynamic Glass with sky-blue reflection) -->
+    <path d="
+      M 618 554
+      L 692 638
+      H 604
+      V 554
+      Z"
+      fill="url(#glass-grad)"
+    />
+
+    <!-- Driver Side Cabin Window -->
+    <path d="
+      M 592 554
+      H 526
+      V 638
+      H 592
+      Z"
+      fill="url(#glass-grad)"
+    />
+
+    <!-- Glass Specular Highlight Reflection -->
+    <line x1="630" y1="562" x2="680" y2="628" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+
+    <!-- Cabin Door Division Line -->
+    <line x1="514" y1="546" x2="514" y2="756" stroke="#CBD5E1" stroke-width="4.5" stroke-linecap="round"/>
+
+    <!-- Van Cargo Flank Speed Stripe (Cyan #00BAF2 to match Bar 4) -->
+    <path d="
+      M 264 634
+      H 504
+      L 516 648
+      L 504 662
+      H 264
+      Z"
+      fill="url(#cyan-grad)"
+    />
+
+    <!-- "T" Monogram on Cargo Panel (Crisp Talliffy Emblem on Van) -->
+    <path d="
+      M 374 570
+      H 408
+      V 580
+      H 396
+      V 616
+      H 386
+      V 580
+      H 374
+      Z"
+      fill="#0E2E91"
+    />
+
+    <!-- Aerodynamic Side Mirror -->
+    <rect x="598" y="632" width="24" height="14" rx="7" fill="#0E2E91"/>
+
+    <!-- High-Luminosity Front Headlight -->
+    <path d="M 756 684 L 768 690 V 708 L 756 706 Z" fill="#FACC15"/>
+    <!-- Headlight Beam Glow Flare -->
+    <polygon points="770,690 812,678 812,720 770,708" fill="#FEF08A" opacity="0.6"/>
+
+    <!-- Rear Vertical Tail Light -->
+    <rect x="252" y="594" width="9" height="46" rx="4.5" fill="#EF4444"/>
+
+    <!-- 5. Heavy-Duty Van Wheels (Detailed Alloy Wheels with Rims & Hubs) -->
+    <!-- Rear Wheel at center (368, 762) -->
+    <circle cx="368" cy="762" r="46" fill="#0A192F"/>
+    <circle cx="368" cy="762" r="32" fill="url(#rim-grad)"/>
+    <circle cx="368" cy="762" r="18" fill="#0E2E91"/>
+    <circle cx="368" cy="762" r="7" fill="#38BDF8"/>
+
+    <!-- Front Wheel at center (656, 762) -->
+    <circle cx="656" cy="762" r="46" fill="#0A192F"/>
+    <circle cx="656" cy="762" r="32" fill="url(#rim-grad)"/>
+    <circle cx="656" cy="762" r="18" fill="#0E2E91"/>
+    <circle cx="656" cy="762" r="7" fill="#38BDF8"/>
+  </g>
+</svg>

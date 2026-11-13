@@ -1,0 +1,78 @@
+# Talliffy — robots.txt
+#
+# Everything behind a login is disallowed. Those routes all redirect to /login,
+# so letting crawlers walk them burns crawl budget and can surface a login page
+# in results under a report's name.
+
+User-agent: *
+
+# ── Authentication ──
+Disallow: /login
+Disallow: /signup
+Disallow: /partner-login
+Disallow: /partner-signup
+Disallow: /forgot-password
+Disallow: /verify-otp
+Disallow: /verify-mobile
+Disallow: /sso/
+Disallow: /auth/
+
+# ── Authenticated application ──
+Disallow: /dashboard
+Disallow: /home
+Disallow: /profile
+Disallow: /settings
+Disallow: /support
+Disallow: /companies
+Disallow: /purchase
+Disallow: /tutorial
+Disallow: /reports/
+Disallow: /vouchers/
+Disallow: /team/
+Disallow: /groups
+Disallow: /ledgers
+Disallow: /stock-groups
+Disallow: /stock-categories
+Disallow: /stock-items
+Disallow: /units
+Disallow: /godowns
+Disallow: /chart-of-accounts
+Disallow: /cost-centres
+
+# ── Admin & partner consoles ──
+Disallow: /admin
+Disallow: /admin/
+Disallow: /partner
+Disallow: /partner/
+
+# ── Public but not for the index ──
+Disallow: /status
+Disallow: /partner-survey
+
+# ── API ──
+Disallow: /api/
+
+# Public marketing and legal pages stay crawlable:
+#   /  /download  /about  /help  /contact  /api-docs  /privacy  /terms  /nda
+Allow: /$
+Allow: /download
+Allow: /about
+Allow: /help
+Allow: /contact
+Allow: /api-docs
+Allow: /privacy
+Allow: /terms
+Allow: /nda
+
+# Assets must stay crawlable — blocking CSS/JS stops Google rendering the SPA
+# and it will judge the page on an empty <div id="root">.
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.svg$
+Allow: /*.webp$
+Allow: /*.woff2$
+
+Sitemap: https://talliffy.com/sitemap.xml

@@ -1,0 +1,111 @@
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { query } from '../db/pool.js';
+import { JWT_SECRET } from '../middleware/auth.middleware.js';
+
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+export class AuthController {
+  static async login(req: Request, res: Response) {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({
+          isValid: false,
+          message: 'Username and password are required',
+          errorCode: 'INVALID_INPUT',
+          data: null,
+        });
+      }
+
+      const userRes = await query(
+        `SELECT userid, username, password, full_name, email, role, van_godown_name, mobile, isactive
+         FROM users
+         WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)
+         ORDER BY userid ASC LIMIT 1`,
+        [username.trim()]
+      );
+
+      if (userRes.rows.length === 0) {
+        return res.status(401).json({
+          isValid: false,
+          message: 'Invalid username or password',
+          errorCode: 'AUTH_FAILED',
+          data: null,
+        });
+      }
+
+      const user = userRes.rows[0];
+      let isMatch = false;
+
+      // Verify bcrypt hash; only allow legacy plaintext match in non-production development
+      if (user.password && (user.password.startsWith('$2a$') || user.password.startsWith('$2b$'))) {
+        isMatch = await bcrypt.compare(password, user.password);
+      } else if (process.env.NODE_ENV !== 'production') {
+        isMatch = user.password === password;
+      }
+
+      if (!isMatch) {
+        return res.status(401).json({
+          isValid: false,
+          message: 'Invalid username or password',
+          errorCode: 'AUTH_FAILED',
+          data: null,
+        });
+      }
+
+      const companyId = parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
+      const companyCode = process.env.DEFAULT_COMPANY_CODE || '30449';
+
+      const tokenPayload = {
+        userId: user.userid,
+        username: user.username,
+        fullName: user.full_name,
+        role: user.role || 'VAN_REP',
+        companyId,
+        companyCode,
+        godownName: user.van_godown_name || 'Van 01 Godown',
+      };
+
+      const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as any });
+
+      return res.status(200).json({
+        isValid: true,
+        message: 'Login successful',
+        errorCode: null,
+        data: {
+          token,
+          user: {
+            id: user.userid,
+            username: user.username,
+            fullName: user.full_name,
+            email: user.email,
+            role: user.role || 'VAN_REP',
+            mobile: user.mobile,
+            godownName: user.van_godown_name || 'Van 01 Godown',
+            companyId,
+            companyCode,
+          },
+        },
+      });
+    } catch (err: any) {
+      console.error('[Login Error]', err);
+      return res.status(500).json({
+        isValid: false,
+        message: err.message,
+        errorCode: 'SERVER_ERROR',
+        data: null,
+      });
+    }
+  }
+
+  static async me(req: Request, res: Response) {
+    return res.status(200).json({
+      isValid: true,
+      message: 'Profile retrieved',
+      errorCode: null,
+      data: req.user,
+    });
+  }
+}

@@ -1,0 +1,505 @@
+{
+  "info": {
+    "name": "Talliffy ERP - Van Sales, Distribution & Tally Sync API",
+    "_postman_id": "c1f7b8e2-9b5a-4e4b-9c7a-9a8b7c6d5e4f",
+    "description": "Production-ready Postman collection for Talliffy ERP (Unified Tally Order Admin Portal and ApexERP Van Sales & Distribution Accounting).\nCovers full Save (POST), Read (GET), Edit (PUT), and Delete (DELETE) flows with RBAC, Discount Approval, and Tally ERP sync.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vendorId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "advisoryId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Login valid with JWT', () => {",
+                  "    pm.expect(res.isValid).to.be.true;",
+                  "    pm.expect(res.data.token).to.not.be.empty;",
+                  "    pm.collectionVariables.set('authToken', res.data.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Categories Master",
+      "item": [
+        {
+          "name": "Save Category (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bio-Pesticides & Crop Protection\",\n  \"slug\": \"bio-pesticides\",\n  \"imageUrl\": \"https://example.com/banner-agro.jpg\",\n  \"status\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "List Categories (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Edit Category (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bio-Pesticides & Organic Protection\",\n  \"status\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["categories", "{{categoryId}}"] }
+          }
+        },
+        {
+          "name": "Delete Category (DELETE)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/categories/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["categories", "{{categoryId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Vendors Master with Borrow Limit",
+      "item": [
+        {
+          "name": "Save Vendor (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rameshbhai Patel\",\n  \"shopName\": \"Patel Krushi Seva Kendra\",\n  \"mobileNumber\": \"9825012345\",\n  \"gstNumber\": \"24AAACP1234A1Z5\",\n  \"borrowAmountLimit\": 75000,\n  \"address\": \"Station Road, Anand, Gujarat\",\n  \"status\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/vendors", "host": ["{{baseUrl}}"], "path": ["vendors"] }
+          }
+        },
+        {
+          "name": "List Vendors with Search (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vendors?search=Patel",
+              "host": ["{{baseUrl}}"],
+              "path": ["vendors"],
+              "query": [{ "key": "search", "value": "Patel" }]
+            }
+          }
+        },
+        {
+          "name": "Edit Vendor Borrow Limit (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"borrowAmountLimit\": 100000,\n  \"address\": \"Highway Circle, Anand, Gujarat\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/vendors/{{vendorId}}", "host": ["{{baseUrl}}"], "path": ["vendors", "{{vendorId}}"] }
+          }
+        },
+        {
+          "name": "Delete Vendor (DELETE)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vendors/{{vendorId}}", "host": ["{{baseUrl}}"], "path": ["vendors", "{{vendorId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Products Master with Packing Specs",
+      "item": [
+        {
+          "name": "Save Product (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": 1,\n  \"code\": \"FERT-191919\",\n  \"name\": \"NPK 19:19:19 Water Soluble Fertilizer\",\n  \"packingQty\": \"10 Bags (50kg)\",\n  \"mrp\": 1800,\n  \"finalPrice\": 1500,\n  \"purchaseCost\": 1200,\n  \"gstRate\": 18,\n  \"description\": \"100% water soluble agro fertilizer for drip and foliar applications.\",\n  \"images\": [\"https://example.com/npk-bag.jpg\"],\n  \"status\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          }
+        },
+        {
+          "name": "List Products (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          }
+        },
+        {
+          "name": "Edit Product Pricing & Packing (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mrp\": 1750,\n  \"finalPrice\": 1450,\n  \"packingQty\": \"12 Bags (50kg)\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] }
+          }
+        },
+        {
+          "name": "Delete Product (DELETE)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Orders & Discount Approval Workflow",
+      "item": [
+        {
+          "name": "Place Order with Special Discount (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": 1,\n  \"salesPersonId\": 1,\n  \"discountAmount\": 1000,\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 10,\n      \"unitPrice\": 1450\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] }
+          }
+        },
+        {
+          "name": "Get Pending Discount Requests (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders?tab=pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [{ "key": "tab", "value": "pending" }]
+            }
+          }
+        },
+        {
+          "name": "Edit Order Discount (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discountAmount\": 1200\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}"] }
+          }
+        },
+        {
+          "name": "Admin 1-Click Approve Order (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approver\": \"Super Admin\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/approve", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}", "approve"] }
+          }
+        },
+        {
+          "name": "Push Approved Order to Tally ERP (POST)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/sync-tally", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}", "sync-tally"] }
+          }
+        },
+        {
+          "name": "Admin Reject Order with Mandatory Reason (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"Requested discount exceeds permissible product margin cap of 10%.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}/reject", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}", "reject"] }
+          }
+        },
+        {
+          "name": "Get Rejected Orders (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders?tab=rejected",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [{ "key": "tab", "value": "rejected" }]
+            }
+          }
+        },
+        {
+          "name": "Delete / Cancel Order (DELETE)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Farmer Crop Advisory Desk",
+      "item": [
+        {
+          "name": "Save Advisory Ticket (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farmerName\": \"Hasmukhbhai Chaudhary\",\n  \"mobileNumber\": \"9898011223\",\n  \"cropName\": \"Groundnut (Mungfali)\",\n  \"district\": \"Junagadh District\",\n  \"issueDescription\": \"White grub infestation damaging roots at pod initiation stage.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/advisory", "host": ["{{baseUrl}}"], "path": ["advisory"] }
+          }
+        },
+        {
+          "name": "List Advisory Tickets (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/advisory", "host": ["{{baseUrl}}"], "path": ["advisory"] }
+          }
+        },
+        {
+          "name": "Resolve Advisory Ticket (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Resolved\",\n  \"solutionNotes\": \"Recommend Chlorpyrifos 20% EC @ 1L/Acre through drip or drenching.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/advisory/{{advisoryId}}", "host": ["{{baseUrl}}"], "path": ["advisory", "{{advisoryId}}"] }
+          }
+        },
+        {
+          "name": "Delete Advisory Ticket (DELETE)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/advisory/{{advisoryId}}", "host": ["{{baseUrl}}"], "path": ["advisory", "{{advisoryId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Settings & RBAC Permissions",
+      "item": [
+        {
+          "name": "Save Theme Color (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"theme_color\",\n  \"value\": \"#059669\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/settings", "host": ["{{baseUrl}}"], "path": ["settings"] }
+          }
+        },
+        {
+          "name": "Get All Settings (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/settings", "host": ["{{baseUrl}}"], "path": ["settings"] }
+          }
+        },
+        {
+          "name": "Register Spatie Permission (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"special-discount-override\",\n  \"groupName\": \"🌱 Orders & Billing\",\n  \"description\": \"Allows regional sales manager to override discount caps\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/settings/permissions", "host": ["{{baseUrl}}"], "path": ["settings", "permissions"] }
+          }
+        },
+        {
+          "name": "List All Permissions (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/settings/permissions", "host": ["{{baseUrl}}"], "path": ["settings", "permissions"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Live Van GPS Tracking",
+      "item": [
+        {
+          "name": "Telemetry Ingest (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salesman_user_id\": 48,\n  \"latitude\": 13.045,\n  \"longitude\": 77.608,\n  \"speed_kmh\": 45,\n  \"heading_deg\": 60,\n  \"battery_pct\": 88,\n  \"is_moving\": true,\n  \"cmp_id\": 1\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tracking/ping", "host": ["{{baseUrl}}"], "path": ["tracking", "ping"] }
+          }
+        },
+        {
+          "name": "Get Live Fleet Positions (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/tracking/live", "host": ["{{baseUrl}}"], "path": ["tracking", "live"] }
+          }
+        },
+        {
+          "name": "Get Historical Breadcrumb Trail (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/tracking/history/48", "host": ["{{baseUrl}}"], "path": ["tracking", "history", "48"] }
+          }
+        },
+        {
+          "name": "Simulate Motion Step (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salesman_user_id\": 48\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/tracking/simulate-step", "host": ["{{baseUrl}}"], "path": ["tracking", "simulate-step"] }
+          }
+        }
+      ]
+    }
+  ]
+}

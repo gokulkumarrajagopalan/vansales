@@ -1,0 +1,6 @@
+{
+  "name": "ApexERP - Van Sales & Distribution Accounting",
+  "description": "Enterprise Cloud POS, Distribution ERP, Fleet Inventory, and Double-Entry Accounting Web Application.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

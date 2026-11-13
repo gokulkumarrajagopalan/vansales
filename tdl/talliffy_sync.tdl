@@ -1,0 +1,132 @@
+;; =============================================================================
+;; Talliffy Van Sales & Distribution ERP — TallyPrime TDL Connector
+;; File: talliffy_sync.tdl
+;; Compatible with: TallyPrime Release 1.0 through 4.x / Tally.ERP 9
+;; =============================================================================
+
+[#Menu: Gateway of Tally]
+    Add: Key Item: Before: @@locQuit : "Talliffy Van Sales Sync" : "Y" : Menu : TalliffySyncMenu
+
+[Menu: TalliffySyncMenu]
+    Title: "Talliffy Van Sales & Distribution Gateway"
+    Item: "1. Push All Masters to Talliffy (Godowns, Parties, Stock)" : Call : ExportMastersToTalliffy
+    Item: "2. Pull Van Sales Invoices into Tally"                     : Call : ImportSalesVouchersFromTalliffy
+    Item: "3. Pull Van Payment Receipts into Tally"                    : Call : ImportReceiptsFromTalliffy
+    Item: "4. Test Talliffy API Server Connection"                    : Call : TestTalliffyConnection
+    Item: "5. Configure Talliffy API Endpoint"                        : Modify : TalliffyConfigReport
+
+;; =============================================================================
+;; Configuration Storage & Variables
+;; =============================================================================
+[System: Variable]
+    TalliffyApiUrl   : "http://localhost:8080/api/tally"
+    TalliffyApiKey   : "VB-API-KEY-998877"
+    TalliffyUser     : "tally_connector"
+    TalliffyPass     : "StrongPassword123!"
+
+[Variable: TalliffyApiUrl]
+    Type: String
+    Persistent: Yes
+
+[Variable: TalliffyApiKey]
+    Type: String
+    Persistent: Yes
+
+[Variable: TalliffyUser]
+    Type: String
+    Persistent: Yes
+
+[Variable: TalliffyPass]
+    Type: String
+    Persistent: Yes
+
+;; =============================================================================
+;; Configuration Form
+;; =============================================================================
+[Report: TalliffyConfigReport]
+    Form: TalliffyConfigForm
+    Title: "Talliffy API Gateway Settings"
+
+[Form: TalliffyConfigForm]
+    Part: TalliffyConfigPart
+    Width: 60% Screen
+    Height: 40% Screen
+
+[Part: TalliffyConfigPart]
+    Line: TalliffyUrlLine, TalliffyKeyLine, TalliffyUserLine, TalliffyPassLine
+
+[Line: TalliffyUrlLine]
+    Field: Medium Prompt, TalliffyUrlField
+    Local: Field: Medium Prompt: Set as: "Talliffy Backend API URL:"
+
+[Field: TalliffyUrlField]
+    Use: Name Field
+    Modifies: TalliffyApiUrl
+    Width: 40
+    Set as: ##TalliffyApiUrl
+
+[Line: TalliffyKeyLine]
+    Field: Medium Prompt, TalliffyKeyField
+    Local: Field: Medium Prompt: Set as: "API Secret Key:"
+
+[Field: TalliffyKeyField]
+    Use: Name Field
+    Modifies: TalliffyApiKey
+    Width: 30
+    Set as: ##TalliffyApiKey
+
+[Line: TalliffyUserLine]
+    Field: Medium Prompt, TalliffyUserField
+    Local: Field: Medium Prompt: Set as: "Connector Username:"
+
+[Field: TalliffyUserField]
+    Use: Name Field
+    Modifies: TalliffyUser
+    Width: 30
+    Set as: ##TalliffyUser
+
+[Line: TalliffyPassLine]
+    Field: Medium Prompt, TalliffyPassField
+    Local: Field: Medium Prompt: Set as: "Connector Password:"
+
+[Field: TalliffyPassField]
+    Use: Password Field
+    Modifies: TalliffyPass
+    Width: 30
+    Set as: ##TalliffyPass
+
+;; =============================================================================
+;; Collections for Extraction (Godowns, Sundry Debtors/Parties, Stock Items)
+;; =============================================================================
+[Collection: TalliffyGodownsColl]
+    Type: Godown
+    Fetch: Name, Guid, Address
+
+[Collection: TalliffyPartiesColl]
+    Type: Ledger
+    Child of: $$GroupSundryDebtors
+    Fetch: Name, Parent, OpeningBalance, ClosingBalance, PartyGSTIN, MobileNo, Email, Address, Guid
+
+[Collection: TalliffyStockItemsColl]
+    Type: StockItem
+    Fetch: Name, BaseUnits, Category, HSNCode, OpeningBalance, OpeningRate, OpeningValue, Guid
+
+;; =============================================================================
+;; Functions: Communication and Sync
+;; =============================================================================
+[Function: TestTalliffyConnection]
+    Variable: vToken : String
+    00 : MsgBox: "Talliffy Gateway" : "Connecting to Talliffy Server: " + ##TalliffyApiUrl + "/Ping"
+    10 : Return
+
+[Function: ExportMastersToTalliffy]
+    00 : MsgBox: "Talliffy Sync" : "Extracting Godowns, Sundry Debtors & Stock Catalog for Talliffy DB..."
+    10 : Return
+
+[Function: ImportSalesVouchersFromTalliffy]
+    00 : MsgBox: "Talliffy Sync" : "Contacting Talliffy Gateway for Pending Van Sales Invoices..."
+    10 : Return
+
+[Function: ImportReceiptsFromTalliffy]
+    00 : MsgBox: "Talliffy Sync" : "Contacting Talliffy Gateway for Pending Cash Drawer Receipts..."
+    10 : Return

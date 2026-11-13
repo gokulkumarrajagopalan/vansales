@@ -1,0 +1,166 @@
+
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Deep Royal Blue Gradient -->
+    <linearGradient id="bg-grad" x1="200" y1="0" x2="824" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1A4EC8"/>
+      <stop offset="60%" stop-color="#0E2E91"/>
+      <stop offset="100%" stop-color="#091E6A"/>
+    </linearGradient>
+
+    <!-- Van Body Gradient -->
+    <linearGradient id="van-body-grad" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#D8E4F5"/>
+    </linearGradient>
+
+    <!-- Cyan Window Gradient -->
+    <linearGradient id="win-grad" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#BAE6FD"/>
+      <stop offset="100%" stop-color="#38BDF8"/>
+    </linearGradient>
+
+    <!-- Cyan Bar 3 Gradient -->
+    <linearGradient id="cyan-bar" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+
+    <!-- Van drop shadow -->
+    <filter id="van-shadow" x="-10%" y="-10%" width="130%" height="140%">
+      <feDropShadow dx="3" dy="6" stdDeviation="8" flood-color="#000B2E" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Tablet shadow -->
+    <filter id="tablet-shadow" x="-15%" y="-15%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000B2E" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- ============================================================ -->
+  <!-- 1. SQUIRCLE BACKGROUND                                        -->
+  <!-- ============================================================ -->
+  <rect x="20" y="20" width="984" height="984" rx="220" fill="url(#bg-grad)"/>
+
+  <!-- ============================================================ -->
+  <!-- 2. TABLET FRAME — compact, top-left                          -->
+  <!-- Tablet: x=68–380, y=100–720 (width=312, height=620)         -->
+  <!-- ============================================================ -->
+  <g filter="url(#tablet-shadow)">
+    <rect x="68" y="100" width="318" height="610" rx="52"
+          stroke="#FFFFFF" stroke-width="28" fill="none"/>
+    <!-- Top notch -->
+    <rect x="200" y="97" width="72" height="16" rx="8" fill="#FFFFFF"/>
+    <rect x="214" y="103" width="44" height="7" rx="3" fill="#0A1E72"/>
+  </g>
+
+  <!-- ============================================================ -->
+  <!-- 3. THREE GROWTH BARS inside tablet                           -->
+  <!-- Bottom-aligned at y=682                                      -->
+  <!-- ============================================================ -->
+
+  <!-- Bar 1: Short, White -->
+  <rect x="122" y="548" width="48" height="134" rx="13" fill="#FFFFFF"/>
+
+  <!-- Bar 2: Tallest, White -->
+  <rect x="190" y="366" width="48" height="316" rx="13" fill="#FFFFFF"/>
+
+  <!-- Bar 3: Medium, Cyan -->
+  <rect x="258" y="430" width="48" height="252" rx="13" fill="url(#cyan-bar)"/>
+
+  <!-- ============================================================ -->
+  <!-- 4. RED CURVED ROAD ARC at bottom under the van              -->
+  <!-- ============================================================ -->
+  <path d="M 60 876 Q 530 1060 960 834"
+        stroke="#E8272A" stroke-width="24" fill="none"
+        stroke-linecap="round" opacity="0.95"/>
+  <path d="M 60 876 Q 530 1060 960 834"
+        stroke="#FF8080" stroke-width="9" fill="none"
+        stroke-linecap="round" opacity="0.45"/>
+
+  <!-- ============================================================ -->
+  <!-- 5. DELIVERY VAN — large, right side, rear overlapping tablet -->
+  <!-- Van pulled LEFT so rear wheel overlaps tablet border        -->
+  <!-- Van body: x=340–870, y=510–800                               -->
+  <!-- ============================================================ -->
+  <g filter="url(#van-shadow)">
+
+    <!-- === WHEEL ARCH FENDERS === -->
+    <ellipse cx="468" cy="800" rx="82" ry="26" fill="#C0D2EC"/>
+    <ellipse cx="738" cy="792" rx="74" ry="24" fill="#C0D2EC"/>
+
+    <!-- === VAN MAIN BODY === -->
+    <path d="
+      M 352 800
+      L 352 558
+      C 352 540 366 528 384 528
+      L 622 528
+      C 636 528 648 536 658 552
+      L 718 634
+      L 764 652
+      C 784 660 798 678 798 698
+      L 798 800
+      Z"
+      fill="url(#van-body-grad)"
+    />
+
+    <!-- === CABIN DOOR LINE === -->
+    <line x1="616" y1="534" x2="616" y2="793" stroke="#B8CCE8" stroke-width="4"/>
+
+    <!-- === WINDSHIELD (angled) === -->
+    <path d="M 622 540 L 704 634 L 610 634 L 610 540 Z"
+          fill="url(#win-grad)" opacity="0.92"/>
+    <!-- Windshield highlight -->
+    <line x1="634" y1="552" x2="688" y2="622" stroke="#FFFFFF" stroke-width="4"
+          stroke-linecap="round" opacity="0.65"/>
+
+    <!-- === CARGO SIDE WINDOW === -->
+    <rect x="392" y="550" width="148" height="102" rx="13"
+          fill="url(#win-grad)" opacity="0.88"/>
+    <line x1="402" y1="558" x2="412" y2="644" stroke="#FFFFFF" stroke-width="3"
+          stroke-linecap="round" opacity="0.55"/>
+
+    <!-- === CYAN CARGO STRIPE === -->
+    <rect x="362" y="660" width="246" height="22" rx="6" fill="#38BDF8" opacity="0.9"/>
+
+    <!-- === FRONT BUMPER === -->
+    <rect x="786" y="738" width="22" height="36" rx="8" fill="#C0D0E8"/>
+
+    <!-- === HEADLIGHT === -->
+    <ellipse cx="800" cy="722" rx="10" ry="13" fill="#FDE68A"/>
+    <path d="M 806 716 L 848 702 L 848 740 L 806 730 Z" fill="#FEF9C3" opacity="0.45"/>
+
+    <!-- === REAR TAIL LIGHT === -->
+    <rect x="348" y="586" width="10" height="46" rx="5" fill="#EF4444"/>
+
+    <!-- === SIDE MIRROR === -->
+    <rect x="600" y="646" width="18" height="12" rx="5" fill="#9AB0D0"/>
+
+    <!-- === FRONT FENDER === -->
+    <path d="M 718 634 L 764 652 L 798 696 L 798 672 L 768 656 L 724 638 Z"
+          fill="#D8E8F5"/>
+
+    <!-- === WHEELS === -->
+    <!-- Rear wheel — overlaps tablet right border (~x=386) -->
+    <circle cx="468" cy="800" r="70" fill="#1E293B"/>
+    <circle cx="468" cy="800" r="49" fill="#94A3B8"/>
+    <circle cx="468" cy="800" r="29" fill="#2D3F5A"/>
+    <circle cx="468" cy="800" r="12" fill="#CBD5E1"/>
+    <circle cx="468" cy="755" r="5" fill="#FFFFFF" opacity="0.6"/>
+    <circle cx="468" cy="845" r="5" fill="#FFFFFF" opacity="0.6"/>
+    <circle cx="423" cy="800" r="5" fill="#FFFFFF" opacity="0.6"/>
+    <circle cx="513" cy="800" r="5" fill="#FFFFFF" opacity="0.6"/>
+
+    <!-- Front wheel -->
+    <circle cx="738" cy="800" r="62" fill="#1E293B"/>
+    <circle cx="738" cy="800" r="43" fill="#94A3B8"/>
+    <circle cx="738" cy="800" r="26" fill="#2D3F5A"/>
+    <circle cx="738" cy="800" r="11" fill="#CBD5E1"/>
+    <circle cx="738" cy="760" r="4" fill="#FFFFFF" opacity="0.6"/>
+    <circle cx="738" cy="840" r="4" fill="#FFFFFF" opacity="0.6"/>
+    <circle cx="698" cy="800" r="4" fill="#FFFFFF" opacity="0.6"/>
+    <circle cx="778" cy="800" r="4" fill="#FFFFFF" opacity="0.6"/>
+
+  </g>
+</svg>
+  
