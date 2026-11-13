@@ -258,6 +258,38 @@ function mapLedgerId(ledgerName: string, ledgers: LedgerAccount[]): string {
   return 'led_ar';
 }
 
+export async function fetchBackendCustomers(tokenOverride?: string): Promise<Customer[]> {
+  const config = tokenOverride ? { headers: { Authorization: `Bearer ${tokenOverride}` } } : undefined;
+  try {
+    const res = await apiClient.get('/api/customers?companyId=12', config);
+    const rawList: any[] = res.data?.data || [];
+    return rawList.map((c, idx) => ({
+      id: `cust_be_${c.id || idx}`,
+      code: `CUST-${String(c.id || idx + 1).padStart(4, '0')}`,
+      name: c.name || c.storeName || 'Customer',
+      companyName: c.storeName || c.name,
+      phone: c.phone || '',
+      email: c.email || '',
+      taxNumber: c.trn || '',
+      creditLimit: 50000,
+      creditDays: 30,
+      route: 'Live Beat Route',
+      address: c.address || 'Dubai, UAE',
+      city: c.city || 'Dubai',
+      ledgerId: `led_${c.id}`,
+      openingBalance: 0,
+      currentBalance: Number(c.balance) || 0,
+      createdBy: 'usr_admin1',
+      createdByName: 'System Admin Lead',
+      assignedSalesmanId: 'usr_van1',
+      status: true
+    }));
+  } catch (err) {
+    console.warn('[BackendAuth] Failed to fetch backend customers', err);
+    return [];
+  }
+}
+
 export async function fetchBackendVouchers(
   customers: Customer[],
   ledgers: LedgerAccount[],

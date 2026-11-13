@@ -103,7 +103,11 @@ router.post(['/customers', '/ledgers'], async (req: Request, res: Response) => {
       creditLimit,
     } = req.body;
 
-    const cmpId = Number(companyId) || 12;
+    let cmpId = Number(companyId) || 12;
+    const cmpCheck = await query('SELECT cmpid FROM public.companies WHERE cmpid = $1', [cmpId]);
+    if (cmpCheck.rows.length === 0) {
+      cmpId = 12;
+    }
     const custName = (name || storeName || '').trim();
     if (!custName) {
       return res.status(400).json({ success: false, message: 'Customer or store name is required' });
@@ -111,8 +115,8 @@ router.post(['/customers', '/ledgers'], async (req: Request, res: Response) => {
 
     const custPhone = phone || mobile || mobileNumber || '';
     const custAddress = address || address1 || '';
-    const custState = state || emirate || 'Karnataka';
-    const custCountry = country || 'India';
+    const custState = state || emirate || 'Dubai';
+    const custCountry = country || 'United Arab Emirates';
     const custTrn = trn || vatTinNumber || '';
 
     // Find Debtors Group
@@ -166,6 +170,29 @@ router.post(['/customers', '/ledgers'], async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error('[Create Customer Error]', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/customers
+router.get(['/customers', '/ledgers'], async (req: Request, res: Response) => {
+  try {
+    let cmpId = Number(req.query.companyId) || 12;
+    const result = await query(
+      `SELECT ledid as id, led_name as name, led_name as "storeName",
+              COALESCE(led_mobile, led_phone, '') as phone,
+              COALESCE(led_address_1, '') as address,
+              COALESCE(led_state, 'Dubai') as city,
+              COALESCE(led_country, 'United Arab Emirates') as country,
+              COALESCE(vat_tin_number, '') as trn,
+              COALESCE(led_closing_balance, 0.00) as balance
+       FROM public.ledgers
+       WHERE cmpid = $1 AND (led_parent ILIKE '%Debtor%' OR led_primary_group ILIKE '%Debtor%')
+       ORDER BY ledid DESC`,
+      [cmpId]
+    );
+    return res.status(200).json({ success: true, data: result.rows });
+  } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -253,32 +280,48 @@ router.post('/vouchers/entry', async (req: Request, res: Response) => {
       paymentMode,
     } = req.body;
 
-    const cmpId = Number(companyId) || 12;
+    let cmpId = Number(companyId) || 12;
+    const cmpCheck = await query('SELECT cmpid FROM public.companies WHERE cmpid = $1', [cmpId]);
+    if (cmpCheck.rows.length === 0) {
+      cmpId = 12;
+    }
+
     const vType = voucherType || 'Sales';
     const vDate = date || new Date().toISOString().slice(0, 10);
     const vNumber = (reference || `VCH-${Date.now()}`).trim();
     const vAmount = Number(amount) || 0;
-    const party = partyLedgerName || 'Cash in Hand';
+    const party = (partyLedgerName || 'Cash in Hand').trim();
     const desc = narration || `${vType} Voucher ${vNumber} for ${party}`;
     const guid = `MOB-${cmpId}-${Date.now()}`;
+    const mode = (paymentMode || 'CASH').toUpperCase();
 
     // Upsert into vouchers table
     const vRes = await query(
       `INSERT INTO public.vouchers (
-         voucher_number, voucher_type, date, total_amount, narration, tally_sync_status, tally_guid
+         voucher_number, voucher_type, date, total_amount, narration, tally_sync_status, tally_guid,
+         cmp_id, user_id, created_by_user_id, voucher_date, amount, party_ledger_name, party_name,
+         payment_mode, source, sync_status, reference
        )
-       VALUES ($1, $2, $3::date, $4, $5, 'synced', $6)
+       VALUES ($1, $2, $3::date, $4, $5, 'synced', $6, $7, 7, 7, $3::date, $4, $8, $8, $9, 'VAN', 'READY', $10)
        ON CONFLICT (voucher_number) DO UPDATE
        SET total_amount = EXCLUDED.total_amount,
+           amount = EXCLUDED.amount,
+           party_ledger_name = EXCLUDED.party_ledger_name,
+           party_name = EXCLUDED.party_name,
+           payment_mode = EXCLUDED.payment_mode,
            narration = EXCLUDED.narration,
-           tally_sync_status = 'synced'
+           voucher_date = EXCLUDED.voucher_date,
+           tally_sync_status = 'synced',
+           sync_status = 'READY'
        RETURNING id`,
-      [vNumber, vType, vDate, vAmount, desc, guid]
+      [vNumber, vType, vDate, vAmount, desc, guid, cmpId, party, mode, vNumber]
     );
 
     const voucherId = vRes.rows[0]?.id ? parseInt(vRes.rows[0].id, 10) : null;
 
     if (voucherId && Array.isArray(lineItems) && lineItems.length > 0) {
+      // Clear old entries if re-saving
+      await query(`DELETE FROM public.voucher_inventory_entries WHERE voucher_id = $1`, [voucherId]);
       for (const item of lineItems) {
         const iName = item.itemName || 'Stock Item';
         const iQty = parseFloat(item.qty) || 1;

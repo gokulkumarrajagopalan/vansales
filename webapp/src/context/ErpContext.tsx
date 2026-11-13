@@ -41,8 +41,10 @@ import {
   initialCropAdvisories,
   initialPermissions,
 } from '../data/initialData';
+import { apiClient } from '../services/api';
 import {
   BackendSyncSummary,
+  fetchBackendCustomers,
   fetchBackendVouchers,
   getTokenForCreator,
   loginBackendUser,
@@ -863,6 +865,15 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `cust_${Date.now()}`,
     };
     setCustomers(prev => [...prev, newCust]);
+    apiClient.post('/api/customers', {
+      name: custData.name,
+      storeName: custData.companyName || custData.name,
+      phone: custData.phone,
+      address: custData.address,
+      city: custData.city,
+      trn: custData.taxNumber,
+      companyId: 12
+    }).catch((err: any) => console.warn('[AddCustomer Backend Sync]', err));
   };
 
   const updateCustomer = (cust: Customer) => {
@@ -1303,12 +1314,23 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { fetchedInvoices: 0, fetchedReceipts: 0, error: msg };
       }
 
-      const { invoices: beInvoices, receipts: beReceipts } = await fetchBackendVouchers(
-        customers,
-        ledgers,
-        items,
-        token
-      );
+      const [beCusts, { invoices: beInvoices, receipts: beReceipts }] = await Promise.all([
+        fetchBackendCustomers(token),
+        fetchBackendVouchers(
+          customers,
+          ledgers,
+          items,
+          token
+        ),
+      ]);
+
+      if (beCusts.length > 0) {
+        setCustomers(prev => {
+          const prevNames = new Set(prev.map(c => c.name.toLowerCase()));
+          const newOnes = beCusts.filter(bc => !prevNames.has(bc.name.toLowerCase()));
+          return [...prev, ...newOnes];
+        });
+      }
 
       const allBe = [...beInvoices, ...beReceipts];
       const byNum = new Map<string, Voucher>();
