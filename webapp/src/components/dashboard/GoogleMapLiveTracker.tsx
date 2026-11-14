@@ -648,7 +648,53 @@ export const GoogleMapLiveTracker: React.FC = () => {
       subdomains,
       maxZoom,
     }).addTo(lMap);
+
+    lMap.invalidateSize();
+    setTimeout(() => lMap.invalidateSize(), 200);
   }, [isGoogleLoaded, mapType, theme]);
+
+  // 5x. Continuous Layout & Viewport Invalidation: Guarantees 100% full-height map tile rendering
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    const handleResize = () => {
+      if (leafletMapInstanceRef.current) {
+        leafletMapInstanceRef.current.invalidateSize();
+      }
+      if (googleMapInstanceRef.current) {
+        const google = (window as any).google;
+        if (google?.maps?.event) {
+          google.maps.event.trigger(googleMapInstanceRef.current, 'resize');
+        }
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        handleResize();
+      });
+      ro.observe(container);
+    }
+
+    // Staggered triggers to adapt as flex layout, sidebar, and stops resolve
+    const timers = [
+      setTimeout(handleResize, 50),
+      setTimeout(handleResize, 150),
+      setTimeout(handleResize, 300),
+      setTimeout(handleResize, 600),
+      setTimeout(handleResize, 1200),
+    ];
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (ro) ro.disconnect();
+      timers.forEach(clearTimeout);
+    };
+  }, [selectedVanId, deliveryStops, mapType]);
 
   // 5b. Leaflet Planned Route Corridor, 250m Arrival Geofence & Interactive Stop Markers
   useEffect(() => {
@@ -1230,10 +1276,11 @@ export const GoogleMapLiveTracker: React.FC = () => {
 
         {/* Right Columns: Interactive Map Canvas (Span 3) */}
         <div className="lg:col-span-3 flex flex-col space-y-4">
-          <div className="isolate relative z-0 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-900 h-[560px] lg:h-[620px] flex-1">
+          <div className="isolate relative z-0 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-900 min-h-[560px] h-[620px] w-full">
             {/* The Map Rendering Canvas */}
             <div
               ref={mapContainerRef}
+              style={{ minHeight: '100%', height: '100%', width: '100%' }}
               className={`w-full h-full z-10 ${
                 mapType === 'roadmap'
                   ? 'dark:[&_.leaflet-tile-pane]:[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)_contrast(1.2)]'
