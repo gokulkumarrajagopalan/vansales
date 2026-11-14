@@ -105,16 +105,41 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, onClose }) 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  <tr>
-                    <td className="py-2.5 font-semibold text-slate-900">
-                      Standard Van Sales Goods Batch
-                      <span className="block text-[10px] text-slate-400 font-normal">Van 01 Godown Allocation</span>
-                    </td>
-                    <td className="py-2.5 text-center font-medium text-slate-700">1 Unit</td>
-                    <td className="py-2.5 text-right font-medium text-slate-700">{subtotal.toFixed(2)}</td>
-                    <td className="py-2.5 text-right font-medium text-slate-700">{vat.toFixed(2)}</td>
-                    <td className="py-2.5 text-right font-bold text-slate-900">{amount.toFixed(2)}</td>
-                  </tr>
+                  {invoice.items && invoice.items.length > 0 ? (
+                    invoice.items.map((it: any, idx: number) => {
+                      const itemName = it.itemName || it.stockItemName || it.name || 'Standard Item';
+                      const qty = Number(it.quantity || it.qty || 1);
+                      const rate = Number(it.rate || 0);
+                      const taxRate = Number(it.taxRate || 5);
+                      const lineTax = Number(it.taxAmount || (qty * rate * (taxRate / 100)));
+                      const lineTotal = Number(it.amount || (qty * rate + lineTax));
+                      return (
+                        <tr key={idx}>
+                          <td className="py-2.5 font-semibold text-slate-900">
+                            {itemName}
+                            <span className="block text-[10px] text-slate-400 font-normal">
+                              {it.godownName || 'Van 01 Godown Allocation'} {it.unitId || it.unit ? `• ${it.unitId || it.unit}` : ''}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-center font-medium text-slate-700">{qty}</td>
+                          <td className="py-2.5 text-right font-medium text-slate-700">{rate.toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-medium text-slate-700">{lineTax.toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-bold text-slate-900">{lineTotal.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td className="py-2.5 font-semibold text-slate-900">
+                        Standard Van Sales Goods Batch
+                        <span className="block text-[10px] text-slate-400 font-normal">Van 01 Godown Allocation</span>
+                      </td>
+                      <td className="py-2.5 text-center font-medium text-slate-700">1 Unit</td>
+                      <td className="py-2.5 text-right font-medium text-slate-700">{subtotal.toFixed(2)}</td>
+                      <td className="py-2.5 text-right font-medium text-slate-700">{vat.toFixed(2)}</td>
+                      <td className="py-2.5 text-right font-bold text-slate-900">{amount.toFixed(2)}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

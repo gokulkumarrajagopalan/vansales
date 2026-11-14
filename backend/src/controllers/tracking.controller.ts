@@ -65,10 +65,17 @@ const VAN_ROUTE_PRESETS: Record<'van1' | 'van2' | 'van3', SimRouteSpec> = {
   },
 };
 
-function resolveVanRoutePreset(godownName?: string | null): SimRouteSpec {
+function resolveVanRoutePreset(godownName?: string | null, userId?: number | null, username?: string | null): SimRouteSpec {
   const g = (godownName || '').toLowerCase();
-  if (g.includes('van 02') || g.includes('van2') || g.includes('east')) return VAN_ROUTE_PRESETS.van2;
-  if (g.includes('van 03') || g.includes('van3') || g.includes('south')) return VAN_ROUTE_PRESETS.van3;
+  const u = (username || '').toLowerCase();
+  const id = Number(userId) || 0;
+
+  if (g.includes('van 02') || g.includes('van2') || g.includes('east') || id === 6 || u.includes('vansales1') || u.includes('van2')) {
+    return VAN_ROUTE_PRESETS.van2;
+  }
+  if (g.includes('van 03') || g.includes('van3') || g.includes('south') || id === 8 || u.includes('van3')) {
+    return VAN_ROUTE_PRESETS.van3;
+  }
   return VAN_ROUTE_PRESETS.van1;
 }
 
@@ -192,12 +199,13 @@ export class TrackingController {
           u.mobile as salesman_mobile,
           u.van_godown_name
         FROM van_location_ping p
-        LEFT JOIN users u ON u.userid = p.salesman_user_id
+        INNER JOIN users u ON u.userid = p.salesman_user_id
+        WHERE u.role = 'VAN_REP'
       `;
       const params: any[] = [];
       if (salesmanId) {
         params.push(salesmanId);
-        sql += ` WHERE p.salesman_user_id = $1`;
+        sql += ` AND p.salesman_user_id = $1`;
       }
       sql += ` ORDER BY p.salesman_user_id, p.recorded_at DESC;`;
 
@@ -209,14 +217,16 @@ export class TrackingController {
         result = await query(sql);
       }
 
-      // Format response with speed in km/h, status label, and address
-      const vans = result.rows.map((row) => {
+      // Format response with speed in km/h, status label, and deduplicate by vehicle registration
+      const seenVehicles = new Set<string>();
+      const vans: any[] = [];
+
+      for (const row of result.rows) {
         const speedKmh = Math.round((parseFloat(row.speed_mps) || 0) * 3.6);
         const heading = parseFloat(row.heading_deg) || 0;
         const lat = parseFloat(row.latitude);
         const lng = parseFloat(row.longitude);
 
-        // Derive status
         let status = 'on_field';
         if (speedKmh === 0) {
           status = 'stopped';
@@ -224,9 +234,14 @@ export class TrackingController {
           status = 'moving';
         }
 
-        const simInfo = resolveVanRoutePreset(row.van_godown_name);
+        const simInfo = resolveVanRoutePreset(row.van_godown_name, row.salesman_user_id, row.salesman_username);
 
-        return {
+        if (seenVehicles.has(simInfo.vehicle_no)) {
+          continue;
+        }
+        seenVehicles.add(simInfo.vehicle_no);
+
+        vans.push({
           id: `veh_${row.salesman_user_id}`,
           salesman_user_id: Number(row.salesman_user_id),
           salesman_name: row.salesman_name || 'Van Driver',
@@ -244,8 +259,8 @@ export class TrackingController {
           status,
           recorded_at: row.recorded_at,
           received_at: row.received_at,
-        };
-      });
+        });
+      }
 
       res.status(200).json({
         isValid: true,

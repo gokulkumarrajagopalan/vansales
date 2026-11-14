@@ -165,47 +165,64 @@ export const GoogleMapLiveTracker: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [filterQuery, setFilterQuery] = useState<string>('');
 
-  // Strict territory isolation: Salesman can strictly ONLY see his own assigned van
+  // Strict territory isolation & deduplication: each van renders exactly once
   const accessibleVans = useMemo(() => {
-    if (!isSalesman || !currentUser) return vans;
-    return vans.filter(v => {
-      const vName = (v.van_name || '').toLowerCase();
-      const vGodown = (v.godown_name || '').toLowerCase();
-      const vReg = (v.vehicle_reg_no || '').toLowerCase();
-      if (currentUser.id === 'usr_van1' || currentUser.email?.includes('van1')) {
-        return (
-          v.id === 'veh_53' ||
-          v.id === 'veh_48' ||
-          v.id === 'veh_1' ||
-          vName.includes('van 01') ||
-          vName.includes('north') ||
-          vGodown.includes('van 01') ||
-          vReg.includes('1001') ||
-          vReg.includes('1024')
-        );
-      }
-      if (currentUser.id === 'usr_van2' || currentUser.email?.includes('van2')) {
-        return (
-          v.id === 'veh_54' ||
-          v.id === 'veh_49' ||
-          v.id === 'veh_2' ||
-          vName.includes('van 02') ||
-          vName.includes('east') ||
-          vGodown.includes('van 02') ||
-          vReg.includes('2002') ||
-          vReg.includes('2048')
-        );
-      }
-      if (currentUser.id === 'usr_van3' || currentUser.email?.includes('van3')) {
-        return (
-          v.id === 'veh_55' ||
-          v.id === 'veh_3' ||
-          vName.includes('van 03') ||
-          vName.includes('south') ||
-          vGodown.includes('van 03') ||
-          vReg.includes('3003')
-        );
-      }
+    let filtered = vans;
+    if (isSalesman && currentUser) {
+      filtered = vans.filter(v => {
+        const vName = (v.van_name || '').toLowerCase();
+        const vGodown = (v.godown_name || '').toLowerCase();
+        const vReg = (v.vehicle_reg_no || '').toLowerCase();
+        if (currentUser.id === 'usr_van1' || currentUser.email?.includes('van1')) {
+          return (
+            v.id === 'veh_53' ||
+            v.id === 'veh_48' ||
+            v.id === 'veh_7' ||
+            v.id === 'veh_1' ||
+            vName.includes('van 01') ||
+            vName.includes('north') ||
+            vGodown.includes('van 01') ||
+            vReg.includes('1001') ||
+            vReg.includes('1024')
+          );
+        }
+        if (currentUser.id === 'usr_van2' || currentUser.email?.includes('van2')) {
+          return (
+            v.id === 'veh_54' ||
+            v.id === 'veh_49' ||
+            v.id === 'veh_6' ||
+            v.id === 'veh_2' ||
+            vName.includes('van 02') ||
+            vName.includes('east') ||
+            vGodown.includes('van 02') ||
+            vReg.includes('2002') ||
+            vReg.includes('2048')
+          );
+        }
+        if (currentUser.id === 'usr_van3' || currentUser.email?.includes('van3')) {
+          return (
+            v.id === 'veh_55' ||
+            v.id === 'veh_8' ||
+            v.id === 'veh_3' ||
+            vName.includes('van 03') ||
+            vName.includes('south') ||
+            vGodown.includes('van 03') ||
+            vReg.includes('3003')
+          );
+        }
+        return true;
+      });
+    }
+
+    // Deduplicate by vehicle_reg_no and van_name so each physical van appears exactly once
+    const seen = new Set<string>();
+    return filtered.filter(v => {
+      const regKey = (v.vehicle_reg_no || '').trim().toLowerCase();
+      const nameKey = (v.van_name || '').trim().toLowerCase();
+      const combinedKey = `${regKey}__${nameKey}`;
+      if (seen.has(combinedKey) || (regKey && seen.has(regKey))) return false;
+      seen.add(combinedKey);
+      if (regKey) seen.add(regKey);
       return true;
     });
   }, [vans, isSalesman, currentUser]);

@@ -364,17 +364,24 @@ export class InvoiceController {
   static async getInvoices(req: Request, res: Response) {
     try {
       const companyId = req.companyId || 12;
-      const { limit = 100, offset = 0, shiftId, includeTally = 'false', source } = req.query;
+      const { limit = 100, offset = 0, shiftId, includeTally = 'false', source, voucherType, type } = req.query;
+
+      let typeFilter = "v.voucher_type IN ('Sales', 'SALES')";
+      if (type === 'orders' || voucherType === 'sales_order' || voucherType === 'Sales Order') {
+        typeFilter = "v.voucher_type IN ('Sales Order', 'SALES ORDER', 'Sales_Order', 'ORDER', 'Order')";
+      } else if (req.query.includeOrders === 'true' || type === 'all') {
+        typeFilter = "v.voucher_type IN ('Sales', 'SALES', 'Sales Order', 'SALES ORDER', 'Sales_Order', 'ORDER', 'Order')";
+      }
 
       let sql = `
-        SELECT v.id, v.guid, v.voucher_number, TO_CHAR(v.voucher_date, 'YYYY-MM-DD') as voucher_date,
+        SELECT v.id, v.guid, v.voucher_number, v.voucher_type, TO_CHAR(v.voucher_date, 'YYYY-MM-DD') as voucher_date,
                v.party_ledger_name, v.reference, v.narration, v.amount, v.tax_amount, v.round_off_amount,
                v.payment_mode, COALESCE(v.source, 'VAN') as source, v.sync_status, v.created_at,
                COALESCE(v.created_by_user_id, v.user_id) as creator_id,
                u.username as creator_username, u.full_name as creator_name, u.van_godown_name as creator_godown
         FROM vouchers v
         LEFT JOIN users u ON u.userid = COALESCE(v.created_by_user_id, v.user_id)
-        WHERE v.cmp_id = $1 AND v.voucher_type IN ('Sales', 'SALES')
+        WHERE v.cmp_id = $1 AND ${typeFilter}
       `;
       const params: any[] = [companyId];
 
@@ -469,6 +476,7 @@ export class InvoiceController {
             return {
               id: r.id,
               guid: r.guid,
+              voucherType: r.voucher_type,
               invoiceNumber: r.voucher_number,
               date: r.voucher_date,
               customerName: r.party_ledger_name,

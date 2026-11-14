@@ -1314,7 +1314,7 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { fetchedInvoices: 0, fetchedReceipts: 0, error: msg };
       }
 
-      const [beCusts, { invoices: beInvoices, receipts: beReceipts }] = await Promise.all([
+      const [beCusts, { invoices: beInvoices, receipts: beReceipts, orders: beOrders }] = await Promise.all([
         fetchBackendCustomers(token),
         fetchBackendVouchers(
           customers,
@@ -1332,7 +1332,7 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
 
-      const allBe = [...beInvoices, ...beReceipts];
+      const allBe = [...beInvoices, ...beReceipts, ...(beOrders || [])];
       const byNum = new Map<string, Voucher>();
       allBe.forEach(b => {
         if (b.voucherNumber) byNum.set(b.voucherNumber, b);
@@ -1345,7 +1345,7 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const mergedExisting: Voucher[] = [];
 
         for (const v of prev) {
-          if (v.voucherType !== 'sales' && v.voucherType !== 'receipt') {
+          if (v.voucherType !== 'sales' && v.voucherType !== 'receipt' && v.voucherType !== 'sales_order') {
             mergedExisting.push(v);
             continue;
           }

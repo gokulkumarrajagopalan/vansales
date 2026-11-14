@@ -266,8 +266,66 @@ const VoucherModalContent: React.FC = () => {
     e.preventDefault();
     setErrorMsg(null);
 
+    // 1. Validate voucher number and date
+    if (!voucherNumber || !voucherNumber.trim()) {
+      setErrorMsg('Validation Error: Voucher Number is required.');
+      return;
+    }
+    if (!date) {
+      setErrorMsg('Validation Error: Voucher Date is required.');
+      return;
+    }
+
+    // 2. Validate Customer / Party selection for sales and order vouchers
+    if (['sales', 'sales_order', 'credit_note', 'receipt'].includes(voucherType)) {
+      if (!partyId || !partyId.trim()) {
+        setErrorMsg('Validation Error: Please select a valid Customer before proceeding.');
+        return;
+      }
+    } else if (['purchase', 'purchase_order', 'debit_note', 'payment'].includes(voucherType)) {
+      if (!partyId || !partyId.trim()) {
+        setErrorMsg('Validation Error: Please select a valid Supplier / Party before proceeding.');
+        return;
+      }
+    }
+
+    // 3. Validate Location / Godown
+    if (!locationId) {
+      setErrorMsg('Validation Error: Please select an assigned Location / Van Godown.');
+      return;
+    }
+
+    // 4. Validate Line Items for Item Vouchers (Sales Invoices, Orders, etc.)
+    if (isItemVoucher) {
+      if (lineItems.length === 0) {
+        setErrorMsg('Validation Error: Invoice must contain at least 1 stock item.');
+        return;
+      }
+      for (let i = 0; i < lineItems.length; i++) {
+        const item = lineItems[i];
+        if (!item.itemId) {
+          setErrorMsg(`Validation Error: Please select a valid product for row #${i + 1}.`);
+          return;
+        }
+        if (!item.quantity || item.quantity <= 0) {
+          setErrorMsg(`Validation Error: Quantity for "${item.itemName || `Row #${i + 1}`}" must be greater than zero.`);
+          return;
+        }
+        if (item.rate === undefined || item.rate < 0) {
+          setErrorMsg(`Validation Error: Rate for "${item.itemName || `Row #${i + 1}`}" cannot be negative.`);
+          return;
+        }
+      }
+    }
+
+    // 5. Validate Total Debit / Credit Balance
     if (!isBalanced) {
-      setErrorMsg(`Cannot post voucher: Debit total (${totalDebit.toFixed(2)}) must equal Credit total (${totalCredit.toFixed(2)}).`);
+      setErrorMsg(`Validation Error: Debit total (${totalDebit.toFixed(2)}) must equal Credit total (${totalCredit.toFixed(2)}).`);
+      return;
+    }
+
+    if (totalDebit <= 0) {
+      setErrorMsg('Validation Error: Total voucher amount must be greater than zero.');
       return;
     }
 

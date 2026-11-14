@@ -295,15 +295,17 @@ export async function fetchBackendVouchers(
   ledgers: LedgerAccount[],
   items: Item[],
   tokenOverride?: string
-): Promise<{ invoices: Voucher[]; receipts: Voucher[] }> {
+): Promise<{ invoices: Voucher[]; receipts: Voucher[]; orders: Voucher[] }> {
   const config = tokenOverride ? { headers: { Authorization: `Bearer ${tokenOverride}` } } : undefined;
-  const [invRes, rctRes] = await Promise.all([
+  const [invRes, rctRes, ordRes] = await Promise.all([
     apiClient.get('/api/v1/invoices?limit=200', config),
     apiClient.get('/api/v1/receipts?limit=200', config),
+    apiClient.get('/api/v1/invoices?type=orders&limit=200', config).catch(() => ({ data: { data: { invoices: [] } } })),
   ]);
 
   const rawInvoices: any[] = invRes.data?.data?.invoices || [];
   const rawReceipts: any[] = rctRes.data?.data?.receipts || [];
+  const rawOrders: any[] = ordRes.data?.data?.invoices || [];
 
   const invoices: Voucher[] = rawInvoices.map(r => {
     const matchedCust = customers.find(
@@ -476,5 +478,100 @@ export async function fetchBackendVouchers(
     };
   });
 
-  return { invoices, receipts };
+  const orders: Voucher[] = rawOrders.map(r => {
+    const matchedCust = customers.find(
+      c => c.name.toLowerCase() === String(r.customerName || '').toLowerCase()
+    );
+    const identity = mapCreatorIdentity(
+      r.createdByUserId,
+      r.createdByUsername,
+      r.createdByName,
+      r.godownName
+    );
+    const totalAmt = Number(r.amount) || 0;
+    const vatAmt = Number(r.vat) || 0;
+    const subtotalAmt =
+      r.subtotal !== undefined && !isNaN(Number(r.subtotal))
+        ? Number(r.subtotal)
+        : Math.round((totalAmt - vatAmt) * 100) / 100;
+
+    const lineItems: VoucherLineItem[] = Array.isArray(r.items)
+      ? r.items.map((it: any) => {
+          const matchedItem = items.find(
+            x => x.name.toLowerCase() === String(it.stockItemName || '').toLowerCase()
+          );
+          const qty = Number(it.qty) || 1;
+          const rate = Number(it.rate) || 0;
+          const discountPercent = Number(it.discountPercent) || 0;
+          const taxable = Number(it.taxable) || qty * rate * (1 - discountPercent / 100);
+          const taxRate = matchedItem?.taxRate ?? 5;
+          const taxAmount = Math.round(taxable * (taxRate / 100) * 100) / 100;
+          return {
+            itemId: matchedItem?.id || `be_item_${it.stockItemName}`,
+            itemName: it.stockItemName || 'Item',
+            unitId: matchedItem?.unitId || 'unit_pcs',
+            quantity: qty,
+            rate,
+            discountPercent,
+            taxRate,
+            taxAmount,
+            amount: Math.round((taxable + taxAmount) * 100) / 100,
+          };
+        })
+      : [];
+
+    const journalEntries: JournalEntryLine[] =
+      Array.isArray(r.journalEntries) && r.journalEntries.length >= 2
+        ? r.journalEntries.map((j: any) => ({
+            ledgerId: mapLedgerId(j.ledgerName, ledgers),
+            ledgerName: j.ledgerName,
+            debit: Number(j.debit) || 0,
+            credit: Number(j.credit) || 0,
+          }))
+        : [
+            {
+              ledgerId: 'led_ar',
+              ledgerName: r.customerName || 'Accounts Receivable (Sundry Debtors)',
+              debit: totalAmt,
+              credit: 0,
+            },
+            {
+              ledgerId: 'led_sales',
+              ledgerName: 'Sales Orders Booking',
+              debit: 0,
+              credit: subtotalAmt,
+            },
+          ];
+
+    return {
+      id: `vouch_be_ord_${r.id}`,
+      backendId: Number(r.id),
+      guid: r.guid,
+      source: r.source || 'VAN',
+      syncStatus: r.syncStatus || 'READY',
+      paymentMode: r.paymentMode || 'CREDIT',
+      voucherNumber: r.invoiceNumber,
+      voucherType: 'sales_order',
+      date: String(r.date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+      partyType: 'customer',
+      partyId: matchedCust?.id,
+      partyName: r.customerName || 'Customer',
+      locationId: identity.locationId,
+      locationName: identity.locationName,
+      vehicleId: identity.vehicleId,
+      driverId: identity.driverId,
+      createdBy: identity.createdBy,
+      createdByName: identity.createdByName,
+      referenceNumber: r.referenceNumber || r.guid,
+      narration: r.narration || `Van sales order (${r.source || 'VAN'})`,
+      items: lineItems.length > 0 ? lineItems : undefined,
+      subtotal: subtotalAmt,
+      taxTotal: vatAmt,
+      totalAmount: totalAmt,
+      journalEntries,
+      status: 'posted',
+    };
+  });
+
+  return { invoices, receipts, orders };
 }
