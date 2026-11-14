@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { query } from '../db/pool.js';
 import { JWT_SECRET } from '../middleware/auth.middleware.js';
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d';
 
 export class AuthController {
   static async login(req: Request, res: Response) {
