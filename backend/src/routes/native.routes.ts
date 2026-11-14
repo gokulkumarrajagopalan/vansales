@@ -541,15 +541,48 @@ router.post('/vouchers/entry', async (req: Request, res: Response) => {
 router.get('/vouchers/company/:companyId/app-entries', async (req: Request, res: Response) => {
   try {
     let cmpId = Number(req.params.companyId) || 12;
-    const r = await query(
-      `SELECT id, voucher_number, voucher_type, date, total_amount, party_name, narration,
-              tally_guid, reference, sync_status, created_at, guid
-       FROM public.vouchers
-       WHERE cmp_id = $1
-       ORDER BY id DESC
-       LIMIT 500`,
-      [cmpId]
-    );
+    let userId = Number(req.query.userId || req.query.user_id) || 0;
+
+    const r = userId > 0
+      ? await query(
+          `SELECT id, voucher_number, voucher_type, date, total_amount, party_name, narration,
+                  tally_guid, reference, sync_status, created_at, guid, payment_mode
+           FROM public.vouchers
+           WHERE cmp_id = $1 AND (user_id = $2 OR created_by_user_id = $2)
+           ORDER BY id DESC
+           LIMIT 500`,
+          [cmpId, userId]
+        )
+      : await query(
+          `SELECT id, voucher_number, voucher_type, date, total_amount, party_name, narration,
+                  tally_guid, reference, sync_status, created_at, guid, payment_mode
+           FROM public.vouchers
+           WHERE cmp_id = $1
+           ORDER BY id DESC
+           LIMIT 500`,
+          [cmpId]
+        );
+
+    const vIds = r.rows.map((row: any) => row.id);
+    const itemsByVoucher: Record<string, any[]> = {};
+    if (vIds.length > 0) {
+      const itemRes = await query(
+        `SELECT voucher_id, stock_item_name, billed_qty, actual_qty, rate, amount
+         FROM public.voucher_inventory_entries
+         WHERE voucher_id = ANY($1)`,
+        [vIds]
+      );
+      for (const item of itemRes.rows) {
+        const vid = String(item.voucher_id);
+        if (!itemsByVoucher[vid]) itemsByVoucher[vid] = [];
+        itemsByVoucher[vid].push({
+          itemName: item.stock_item_name,
+          qty: parseFloat(item.billed_qty || item.actual_qty) || 1,
+          rate: parseFloat(item.rate) || 0,
+          amount: parseFloat(item.amount) || 0,
+        });
+      }
+    }
 
     const formatted = r.rows.map((row: any) => {
       let orig = row.reference;
@@ -572,7 +605,9 @@ router.get('/vouchers/company/:companyId/app-entries', async (req: Request, res:
         guid: row.guid || row.tally_guid,
         syncStatus: row.sync_status || 'synced',
         reference: row.reference,
+        paymentMode: row.payment_mode || 'CASH',
         wasRenamed: Boolean(orig && orig !== row.voucher_number),
+        items: itemsByVoucher[String(row.id)] || [],
       };
     });
 
@@ -585,15 +620,48 @@ router.get('/vouchers/company/:companyId/app-entries', async (req: Request, res:
 router.get('/vouchers/mine', async (req: Request, res: Response) => {
   try {
     let cmpId = Number(req.query.cmpId) || 12;
-    const r = await query(
-      `SELECT id, voucher_number, voucher_type, date, total_amount, party_name, narration,
-              tally_guid, reference, sync_status, created_at, guid
-       FROM public.vouchers
-       WHERE cmp_id = $1
-       ORDER BY id DESC
-       LIMIT 500`,
-      [cmpId]
-    );
+    let userId = Number(req.query.userId || req.query.user_id) || 0;
+
+    const r = userId > 0
+      ? await query(
+          `SELECT id, voucher_number, voucher_type, date, total_amount, party_name, narration,
+                  tally_guid, reference, sync_status, created_at, guid, payment_mode
+           FROM public.vouchers
+           WHERE cmp_id = $1 AND (user_id = $2 OR created_by_user_id = $2)
+           ORDER BY id DESC
+           LIMIT 500`,
+          [cmpId, userId]
+        )
+      : await query(
+          `SELECT id, voucher_number, voucher_type, date, total_amount, party_name, narration,
+                  tally_guid, reference, sync_status, created_at, guid, payment_mode
+           FROM public.vouchers
+           WHERE cmp_id = $1
+           ORDER BY id DESC
+           LIMIT 500`,
+          [cmpId]
+        );
+
+    const vIds = r.rows.map((row: any) => row.id);
+    const itemsByVoucher: Record<string, any[]> = {};
+    if (vIds.length > 0) {
+      const itemRes = await query(
+        `SELECT voucher_id, stock_item_name, billed_qty, actual_qty, rate, amount
+         FROM public.voucher_inventory_entries
+         WHERE voucher_id = ANY($1)`,
+        [vIds]
+      );
+      for (const item of itemRes.rows) {
+        const vid = String(item.voucher_id);
+        if (!itemsByVoucher[vid]) itemsByVoucher[vid] = [];
+        itemsByVoucher[vid].push({
+          itemName: item.stock_item_name,
+          qty: parseFloat(item.billed_qty || item.actual_qty) || 1,
+          rate: parseFloat(item.rate) || 0,
+          amount: parseFloat(item.amount) || 0,
+        });
+      }
+    }
 
     const formatted = r.rows.map((row: any) => {
       let orig = row.reference;
@@ -616,7 +684,9 @@ router.get('/vouchers/mine', async (req: Request, res: Response) => {
         guid: row.guid || row.tally_guid,
         syncStatus: row.sync_status || 'synced',
         reference: row.reference,
+        paymentMode: row.payment_mode || 'CASH',
         wasRenamed: Boolean(orig && orig !== row.voucher_number),
+        items: itemsByVoucher[String(row.id)] || [],
       };
     });
 
