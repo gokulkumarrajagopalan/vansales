@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useErp } from '../../context/ErpContext';
 import { UserAccount } from '../../types/erp';
-import { Users, Shield, Plus, CheckCircle2, X } from 'lucide-react';
+import { Users, Shield, Plus, CheckCircle2, X, Trash2 } from 'lucide-react';
 
 export const UsersPermissionsView: React.FC = () => {
-  const { users, addUser, locations } = useErp();
+  const { users, addUser, deleteUser, locations, currentUser } = useErp();
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Form states
@@ -72,11 +72,13 @@ export const UsersPermissionsView: React.FC = () => {
               <th className="py-3 px-4">Access Role</th>
               <th className="py-3 px-4">Assigned Location (Van/Depot)</th>
               <th className="py-3 px-4 text-center">Status</th>
+              <th className="py-3 px-4 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {users.map(u => {
               const loc = locations.find(l => l.id === u.assignedLocationId);
+              const isSelf = currentUser?.id === u.id || u.id === 'usr_admin1';
               return (
                 <tr key={u.id} className="hover:bg-slate-50">
                   <td className="py-3 px-4">
@@ -95,6 +97,23 @@ export const UsersPermissionsView: React.FC = () => {
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Active</span>
                     </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    {!isSelf ? (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete user account "${u.name}" (${u.email})?`)) {
+                            deleteUser(u.id);
+                          }
+                        }}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"
+                        title="Delete User Account"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic">Protected</span>
+                    )}
                   </td>
                 </tr>
               );

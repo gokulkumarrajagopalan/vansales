@@ -167,6 +167,7 @@ interface ErpContextType {
   addPriceList: (pl: Omit<PriceList, 'id'>) => void;
   updatePriceList: (pl: PriceList) => void;
   addUser: (usr: Omit<UserAccount, 'id'>) => void;
+  deleteUser: (userId: string) => void;
   addVoucher: (voucher: Omit<Voucher, 'id'>) => { success: boolean; error?: string };
 
   // Calculations & Analytics
@@ -995,6 +996,10 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers(prev => [...prev, newUsr]);
   };
 
+  const deleteUser = (userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
   // Ledger Balance Calculator
   const getLedgerBalance = (ledgerId: string): number => {
     const ledger = ledgers.find(l => l.id === ledgerId);
@@ -1595,6 +1600,7 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addPriceList,
         updatePriceList,
         addUser,
+        deleteUser,
         addVoucher,
 
         getFilteredVouchers,
