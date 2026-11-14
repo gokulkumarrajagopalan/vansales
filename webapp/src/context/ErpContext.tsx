@@ -304,7 +304,31 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
     try {
       const saved = localStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
+      const parsed = saved ? JSON.parse(saved) : null;
+      // Auto-heal: If backend user indicates ADMIN, ensure role is 'admin' and not restricted to Van 01
+      const backendUserRaw = localStorage.getItem('backend_user');
+      if (backendUserRaw) {
+        try {
+          const bu = JSON.parse(backendUserRaw);
+          const buRole = (bu.role || '').toUpperCase();
+          const buName = (bu.username || '').toLowerCase();
+          const buEmail = (bu.email || '').toLowerCase();
+          if (buRole === 'ADMIN' || buName === 'admin' || buName === 'admin1' || buEmail.includes('admin')) {
+            if (parsed && (parsed.role !== 'admin' || parsed.assignedLocationId || parsed.assignedVehicleId)) {
+              parsed.role = 'admin';
+              parsed.id = 'usr_admin1';
+              parsed.name = bu.fullName || 'System Administrator';
+              parsed.email = bu.email || 'admin@talliffy.com';
+              parsed.assignedLocationId = undefined;
+              parsed.assignedVehicleId = undefined;
+              localStorage.setItem('user', JSON.stringify(parsed));
+            }
+          }
+        } catch {
+          // ignore parsing error
+        }
+      }
+      return parsed;
     } catch {
       return null;
     }

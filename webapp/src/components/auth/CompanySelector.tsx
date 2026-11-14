@@ -36,8 +36,12 @@ export const CompanySelector: React.FC = () => {
             <LogoMark size="xl" />
           </div>
           <h2 className="text-lg font-bold tracking-tight">Select Business Workspace</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Signed in as <span className="text-blue-600 dark:text-blue-400 font-semibold">{currentUser?.name}</span>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-center gap-1.5 flex-wrap">
+            <span>Signed in as</span>
+            <span className="text-blue-600 dark:text-blue-400 font-semibold">{currentUser?.name || 'Administrator'}</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 uppercase tracking-wider">
+              {currentUser?.role === 'admin' ? 'System Administrator' : currentUser?.role === 'accountant' ? 'Accountant' : currentUser?.role === 'warehouse_manager' ? 'Depot Mgr' : 'Van Sales Rep'}
+            </span>
           </p>
         </div>
 

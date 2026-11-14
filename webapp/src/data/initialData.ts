@@ -554,7 +554,7 @@ export const initialPriceLists: PriceList[] = [
 ];
 
 export const initialUsers: UserAccount[] = [
-  { id: 'usr_admin1', name: 'System Admin Lead', email: 'admin1@talliffy.com', role: 'admin', active: true },
+  { id: 'usr_admin1', name: 'System Administrator', email: 'admin@talliffy.com', role: 'admin', active: true },
   { id: 'usr_admin2', name: 'Operations Admin', email: 'admin2@talliffy.com', role: 'admin', active: true },
   { id: 'usr_van1', name: 'Karthik Rao (Van 01)', email: 'van1@talliffy.com', role: 'salesman_pos', active: true, assignedLocationId: 'loc_van1', assignedVehicleId: 'veh_1' },
   { id: 'usr_van2', name: 'Imran Shaikh (Van 02)', email: 'van2@talliffy.com', role: 'salesman_pos', active: true, assignedLocationId: 'loc_van2', assignedVehicleId: 'veh_2' },

@@ -22,7 +22,10 @@ export class AuthController {
       const userRes = await query(
         `SELECT userid, username, password, full_name, email, role, van_godown_name, mobile, isactive
          FROM users
-         WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)
+         WHERE LOWER(username) = LOWER($1) 
+            OR LOWER(email) = LOWER($1)
+            OR (LOWER($1) IN ('admin', 'admin1') AND LOWER(username) IN ('admin', 'admin1'))
+            OR (LOWER($1) IN ('admin@talliffy.com', 'admin1@talliffy.com') AND (LOWER(username) = 'admin' OR LOWER(email) = 'admin@talliffy.com'))
          ORDER BY userid ASC LIMIT 1`,
         [username.trim()]
       );
@@ -69,17 +72,28 @@ export class AuthController {
       const currencySymbol = companyRow?.currency_symbol || 'AED';
       const currencyCode = companyRow?.currency_formal_name || 'AED';
 
+      const userRole = (user.role || 'VAN_REP').toUpperCase();
+      const defaultGodown =
+        user.van_godown_name ||
+        (userRole === 'ADMIN'
+          ? 'Headquarters'
+          : userRole === 'ACCOUNTANT'
+          ? 'Accounts Office'
+          : userRole === 'WAREHOUSE' || userRole === 'WAREHOUSE_MANAGER'
+          ? 'Central Warehouse'
+          : 'Van 01 Godown');
+
       const tokenPayload = {
         userId: user.userid,
         username: user.username,
         fullName: user.full_name,
-        role: user.role || 'VAN_REP',
+        role: userRole,
         companyId,
         companyCode,
         companyName: companyRow?.name || 'Talliffy Demo Company',
         currency: currencyCode,
         currencySymbol,
-        godownName: user.van_godown_name || 'Van 01 Godown',
+        godownName: defaultGodown,
       };
 
       const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as any });
@@ -95,7 +109,7 @@ export class AuthController {
         loginId: user.username,
         username: user.username,
         fullName: user.full_name,
-        role: user.role || 'VAN_REP',
+        role: userRole,
         licenceNo: user.licence_no ? String(user.licence_no) : '',
         mobile: user.mobile,
         companyId,
@@ -110,7 +124,7 @@ export class AuthController {
           loginId: user.username,
           username: user.username,
           fullName: user.full_name,
-          role: user.role || 'VAN_REP',
+          role: userRole,
           mobile: user.mobile,
           licenceNo: user.licence_no ? String(user.licence_no) : '',
           currency: currencyCode,
@@ -121,9 +135,9 @@ export class AuthController {
             username: user.username,
             fullName: user.full_name,
             email: user.email,
-            role: user.role || 'VAN_REP',
+            role: userRole,
             mobile: user.mobile,
-            godownName: user.van_godown_name || 'Van 01 Godown',
+            godownName: defaultGodown,
             companyId,
             companyCode,
             currency: currencyCode,

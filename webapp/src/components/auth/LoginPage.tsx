@@ -54,54 +54,102 @@ export const LoginPage: React.FC = () => {
     const uname = (bu.username || '').toLowerCase();
     const backendRole = (bu.role || '').toUpperCase();
     const godownLower = (bu.godownName || '').toLowerCase();
+    const emailLower = (bu.email || '').toLowerCase();
 
-    const mappedRole: UserAccount['role'] =
-      backendRole === 'ADMIN'
-        ? 'admin'
-        : backendRole === 'ACCOUNTANT'
-        ? 'accountant'
-        : backendRole === 'WAREHOUSE' || backendRole === 'WAREHOUSE_MANAGER'
-        ? 'warehouse_manager'
-        : 'salesman_pos';
+    // Determine strict primary role
+    const isAdmin =
+      backendRole === 'ADMIN' ||
+      uname === 'admin' ||
+      uname === 'admin1' ||
+      uname === 'admin2' ||
+      emailLower.includes('admin');
 
-    const matchedProfile: UserAccount | undefined = users.find(
-      u =>
-        (bu.email && u.email?.toLowerCase() === bu.email.toLowerCase()) ||
-        (uname === 'admin1' && u.id === 'usr_admin1') ||
-        (uname === 'admin2' && u.id === 'usr_admin2') ||
-        ((uname === 'van1' || godownLower.includes('van 01')) && u.id === 'usr_van1') ||
-        ((uname === 'van2' || godownLower.includes('van 02')) && u.id === 'usr_van2') ||
-        ((uname === 'van3' || godownLower.includes('van 03')) && u.id === 'usr_van3') ||
-        (mappedRole === 'accountant' && u.role === 'accountant') ||
-        (mappedRole === 'warehouse_manager' && u.role === 'warehouse_manager')
-    );
+    const isAccountant =
+      !isAdmin &&
+      (backendRole === 'ACCOUNTANT' || uname === 'accountant' || emailLower.includes('accounts'));
 
-    const vanSlot =
-      uname === 'van1' || godownLower.includes('van 01')
+    const isWarehouse =
+      !isAdmin &&
+      !isAccountant &&
+      (backendRole === 'WAREHOUSE' || backendRole === 'WAREHOUSE_MANAGER' || uname === 'warehouse' || emailLower.includes('warehouse'));
+
+    const isVanRep = !isAdmin && !isAccountant && !isWarehouse;
+
+    const mappedRole: UserAccount['role'] = isAdmin
+      ? 'admin'
+      : isAccountant
+      ? 'accountant'
+      : isWarehouse
+      ? 'warehouse_manager'
+      : 'salesman_pos';
+
+    let matchedProfile: UserAccount | undefined;
+
+    if (isAdmin) {
+      // Find admin profile strictly among admin users
+      matchedProfile =
+        users.find(u => u.role === 'admin' && (u.email?.toLowerCase() === emailLower || (uname === 'admin2' ? u.id === 'usr_admin2' : u.id === 'usr_admin1'))) ||
+        users.find(u => u.role === 'admin');
+    } else if (isAccountant) {
+      matchedProfile = users.find(u => u.role === 'accountant');
+    } else if (isWarehouse) {
+      matchedProfile = users.find(u => u.role === 'warehouse_manager');
+    } else {
+      // Find van rep strictly among van salesmen
+      matchedProfile = users.find(
+        u =>
+          u.role === 'salesman_pos' &&
+          ((emailLower && u.email?.toLowerCase() === emailLower) ||
+            (uname === 'van1' && u.id === 'usr_van1') ||
+            (uname === 'van2' && u.id === 'usr_van2') ||
+            (uname === 'van3' && u.id === 'usr_van3') ||
+            (godownLower.includes('van 01') && u.id === 'usr_van1') ||
+            (godownLower.includes('van 02') && u.id === 'usr_van2') ||
+            (godownLower.includes('van 03') && u.id === 'usr_van3'))
+      );
+    }
+
+    const vanSlot = isVanRep
+      ? uname === 'van1' || godownLower.includes('van 01') || godownLower.includes('van-01')
         ? 1
-        : uname === 'van2' || godownLower.includes('van 02')
+        : uname === 'van2' || godownLower.includes('van 02') || godownLower.includes('van-02') || uname === 'vansales1'
         ? 2
-        : uname === 'van3' || godownLower.includes('van 03')
+        : uname === 'van3' || godownLower.includes('van 03') || godownLower.includes('van-03')
         ? 3
-        : null;
+        : 1
+      : null;
 
-    const mappedUser: UserAccount = matchedProfile || {
-      id: vanSlot
-        ? `usr_van${vanSlot}`
-        : backendRole === 'ADMIN'
-        ? `usr_${uname || bu.id}`
-        : `usr_${bu.id}`,
-      name: bu.fullName || bu.username,
-      email: bu.email || `${bu.username}@talliffy.com`,
-      role: mappedRole,
-      active: true,
-      assignedLocationId: vanSlot
-        ? `loc_van${vanSlot}`
-        : mappedRole === 'warehouse_manager'
-        ? 'loc_main'
-        : undefined,
-      assignedVehicleId: vanSlot ? `veh_${vanSlot}` : undefined,
-    };
+    const mappedUser: UserAccount = matchedProfile
+      ? {
+          ...matchedProfile,
+          name: isAdmin ? (bu.fullName || matchedProfile.name || 'System Administrator') : (bu.fullName || matchedProfile.name),
+          email: bu.email || matchedProfile.email,
+          role: mappedRole,
+          active: true,
+          assignedLocationId: isAdmin ? undefined : matchedProfile.assignedLocationId,
+          assignedVehicleId: isAdmin ? undefined : matchedProfile.assignedVehicleId,
+        }
+      : {
+          id: isAdmin
+            ? 'usr_admin1'
+            : isAccountant
+            ? 'usr_acct'
+            : isWarehouse
+            ? 'usr_wh'
+            : vanSlot
+            ? `usr_van${vanSlot}`
+            : `usr_${bu.id || uname}`,
+          name: bu.fullName || (isAdmin ? 'System Administrator' : bu.username),
+          email: bu.email || (isAdmin ? 'admin@talliffy.com' : `${bu.username}@talliffy.com`),
+          role: mappedRole,
+          active: true,
+          assignedLocationId: isVanRep && vanSlot
+            ? `loc_van${vanSlot}`
+            : isWarehouse
+            ? 'loc_main'
+            : undefined,
+          assignedVehicleId: isVanRep && vanSlot ? `veh_${vanSlot}` : undefined,
+        };
 
     try {
       if (rememberMe) {

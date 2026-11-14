@@ -13,30 +13,32 @@ export interface BackendSyncSummary {
 }
 
 export function resolveBackendCredentials(user?: UserAccount | null): { username: string; password: string } {
-  if (!user) return { username: 'admin1', password: 'password123' };
+  if (!user || user.role === 'admin' || user.id === 'usr_admin1' || (user.email || '').toLowerCase().includes('admin')) {
+    return { username: 'admin', password: 'Pramith9632' };
+  }
   const email = (user.email || '').toLowerCase();
   if (user.id === 'usr_van1' || email.includes('van1')) {
-    return { username: 'van1', password: 'password123' };
+    return { username: 'van1', password: 'Pramith9632' };
   }
-  if (user.id === 'usr_van2' || email.includes('van2')) {
-    return { username: 'van2', password: 'password123' };
+  if (user.id === 'usr_van2' || email.includes('van2') || email.includes('sales1')) {
+    return { username: 'vansales1', password: 'Pramith9632' };
   }
   if (user.id === 'usr_van3' || email.includes('van3')) {
-    return { username: 'van3', password: 'password123' };
+    return { username: 'van3', password: 'Pramith9632' };
   }
   if (user.id === 'usr_admin2' || email.includes('admin2')) {
-    return { username: 'admin2', password: 'password123' };
+    return { username: 'admin', password: 'Pramith9632' };
   }
   if (user.role === 'accountant') {
-    return { username: 'accountant', password: 'password123' };
+    return { username: 'admin', password: 'Pramith9632' };
   }
   if (user.role === 'warehouse_manager') {
-    return { username: 'warehouse', password: 'password123' };
+    return { username: 'admin', password: 'Pramith9632' };
   }
   if (user.role === 'salesman_pos') {
-    return { username: 'van1', password: 'password123' };
+    return { username: 'van1', password: 'Pramith9632' };
   }
-  return { username: 'admin1', password: 'password123' };
+  return { username: 'admin', password: 'Pramith9632' };
 }
 
 export async function authenticateWithBackend(
