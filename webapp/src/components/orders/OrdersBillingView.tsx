@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 export const OrdersBillingView: React.FC = () => {
-  const { orders, approveOrder, rejectOrder, syncOrderToTally, themeColor, currentUser, users, setCurrentView } = useErp();
+  const { orders, approveOrder, rejectOrder, syncOrderToTally, themeColor, currentUser, users, setCurrentView, company } = useErp();
 
   const salesmanUsers = useMemo(() => users.filter(u => u.role === 'salesman_pos'), [users]);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -328,7 +328,7 @@ export const OrdersBillingView: React.FC = () => {
                         </div>
                         <div className="text-[11px] text-slate-400">{order.vendorName} • {order.vendorAddress.split(',')[0]}</div>
                         <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                          Borrow Limit: ₹{order.vendorBorrowLimit.toLocaleString('en-IN')}
+                          Borrow Limit: {company.currencySymbol} {order.vendorBorrowLimit.toLocaleString()}
                         </div>
                       </td>
 
@@ -345,14 +345,14 @@ export const OrdersBillingView: React.FC = () => {
 
                       {/* Subtotal */}
                       <td className="py-3.5 px-4 text-right font-medium text-slate-700 dark:text-slate-300">
-                        ₹{order.subtotal.toLocaleString('en-IN')}
+                        {company.currencySymbol} {order.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
 
                       {/* Discount */}
                       <td className="py-3.5 px-4 text-right">
                         {hasDiscount ? (
                           <span className="font-semibold text-amber-600 dark:text-amber-400">
-                            -₹{order.discountAmount.toLocaleString('en-IN')}
+                            -{company.currencySymbol} {order.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </span>
                         ) : (
                           <span className="text-slate-400">-</span>
@@ -361,7 +361,7 @@ export const OrdersBillingView: React.FC = () => {
 
                       {/* Final Total */}
                       <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                        ₹{order.finalTotal.toLocaleString('en-IN')}
+                        {company.currencySymbol} {order.finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
 
                       {/* Status & Approval */}
@@ -502,11 +502,11 @@ export const OrdersBillingView: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Requested Discount:</span>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">₹{rejectingOrder.discountAmount.toLocaleString('en-IN')}</span>
+                <span className="font-semibold text-amber-600 dark:text-amber-400">{company.currencySymbol} {rejectingOrder.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Order Total:</span>
-                <span className="font-bold text-slate-900 dark:text-white">₹{rejectingOrder.finalTotal.toLocaleString('en-IN')}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{company.currencySymbol} {rejectingOrder.finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
@@ -613,10 +613,10 @@ export const OrdersBillingView: React.FC = () => {
                         {item.quantity}
                       </td>
                       <td className="py-2.5 px-3 text-right text-slate-600 dark:text-slate-300">
-                        ₹{item.unitPrice.toLocaleString('en-IN')}
+                        {company.currencySymbol} {item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-white">
-                        ₹{item.lineTotal.toLocaleString('en-IN')}
+                        {company.currencySymbol} {item.lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}
@@ -628,17 +628,17 @@ export const OrdersBillingView: React.FC = () => {
             <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-xs">
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Subtotal (Gross Amount)</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">₹{selectedOrder.subtotal.toLocaleString('en-IN')}</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{company.currencySymbol} {selectedOrder.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               {selectedOrder.discountAmount > 0 && (
                 <div className="flex justify-between text-amber-600 dark:text-amber-400 font-medium">
                   <span>Special Discount Requested</span>
-                  <span>-₹{selectedOrder.discountAmount.toLocaleString('en-IN')}</span>
+                  <span>-{company.currencySymbol} {selectedOrder.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-800 pt-2">
                 <span>Final Billing Total</span>
-                <span className="text-base text-emerald-600 dark:text-emerald-400">₹{selectedOrder.finalTotal.toLocaleString('en-IN')}</span>
+                <span className="text-base text-emerald-600 dark:text-emerald-400">{company.currencySymbol} {selectedOrder.finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
 
               {selectedOrder.rejectionReason && (

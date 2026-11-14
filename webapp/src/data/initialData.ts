@@ -21,21 +21,21 @@ const fy = getFiscalYearBoundsIso();
 
 export const initialCompany: CompanyProfile = {
   id: 'comp_1',
-  name: 'Talliffy Distribution & Van Sales Ltd.',
+  name: 'Talliffy Distribution & Van Sales LLC',
   tradeName: 'Talliffy Direct Van Sales',
-  taxNumber: 'GSTIN29AAACA9021K1ZZ',
-  registrationNumber: 'CIN-U51909KA2021PTC148901',
-  currency: 'INR',
-  currencySymbol: '₹',
+  taxNumber: '100876543200003',
+  registrationNumber: 'TRN-100876543200003',
+  currency: 'AED',
+  currencySymbol: 'AED',
   fiscalYearStart: fy.start,
   fiscalYearEnd: fy.end,
   email: 'admin1@talliffy.com',
-  phone: '+91 98450 10001',
-  address: 'Plot 42, Peenya Industrial Area, Phase II',
-  city: 'Bengaluru',
-  state: 'Karnataka',
-  country: 'India',
-  postalCode: '560058',
+  phone: '+971 4 678 9012',
+  address: 'Al Barsha 1, Near Mall of the Emirates',
+  city: 'Dubai',
+  state: 'Dubai',
+  country: 'United Arab Emirates',
+  postalCode: '00000',
 };
 
 // Complete Multi-Group Tally Ledger Master Setup (Balanced Opening Assets/Liabilities/Equity: ₹4,500,000 Dr == Cr)

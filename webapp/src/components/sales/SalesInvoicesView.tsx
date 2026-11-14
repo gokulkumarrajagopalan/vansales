@@ -1,7 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { useErp } from '../../context/ErpContext';
-import { Plus, Search, Eye, Truck, FileText, Download, Filter, Shield, RefreshCw, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Plus, Search, Eye, Truck, FileText, Download, Filter, Shield, RefreshCw, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft, Sliders, RotateCcw } from 'lucide-react';
 import { exportVoucherPdf } from '../../utils/pdfExport';
+import { useResizableColumns } from '../../hooks/useResizableColumns';
+
+type InvoiceCol = 'date' | 'number' | 'customer' | 'location' | 'reference' | 'tax' | 'grandTotal' | 'action';
+
+const INITIAL_WIDTHS: Record<InvoiceCol, number> = {
+  date: 130,
+  number: 160,
+  customer: 260,
+  location: 240,
+  reference: 120,
+  tax: 110,
+  grandTotal: 140,
+  action: 130,
+};
+
+const MIN_WIDTHS: Partial<Record<InvoiceCol, number>> = {
+  date: 95,
+  number: 120,
+  customer: 160,
+  location: 160,
+  reference: 90,
+  tax: 80,
+  grandTotal: 100,
+  action: 110,
+};
 
 export const SalesInvoicesView: React.FC = () => {
   const {
@@ -24,6 +49,27 @@ export const SalesInvoicesView: React.FC = () => {
   const [search, setSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState<'all' | 'loc_van1' | 'loc_van2' | 'loc_main'>('all');
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  const { widths, startResizing, resetWidths } = useResizableColumns<InvoiceCol>(
+    'talliffy_sales_invoices_col_widths',
+    INITIAL_WIDTHS,
+    MIN_WIDTHS
+  );
+
+  const totalTableWidth = useMemo(() => {
+    return Object.values(widths).reduce((acc, curr) => acc + curr, 0);
+  }, [widths]);
+
+  const ResizeHandle: React.FC<{ colKey: InvoiceCol }> = ({ colKey }) => (
+    <div
+      onMouseDown={e => startResizing(colKey, e)}
+      onClick={e => e.stopPropagation()}
+      className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-blue-500/30 active:bg-blue-600 transition-colors z-20 group flex items-center justify-center select-none"
+      title="Click and drag to adjust column width"
+    >
+      <div className="w-[1.5px] h-4 bg-slate-300 dark:bg-slate-700 group-hover:bg-blue-500 group-active:bg-blue-600" />
+    </div>
+  );
 
   const handlePostAll = async () => {
     const res = await postAllInvoicesToBackend();
@@ -184,7 +230,16 @@ export const SalesInvoicesView: React.FC = () => {
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap justify-between sm:justify-end">
+        <div className="flex items-center gap-2.5 flex-wrap justify-between sm:justify-end">
+          <button
+            onClick={resetWidths}
+            className="text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 transition flex items-center gap-1.5"
+            title="Reset columns to optimal default widths"
+          >
+            <RotateCcw className="w-3 h-3 text-slate-400" />
+            <span>Reset Columns</span>
+          </button>
+
           {!isSalesman && (
             <div className="flex items-center gap-1.5">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
@@ -201,29 +256,66 @@ export const SalesInvoicesView: React.FC = () => {
             </div>
           )}
 
-          <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+          <div className="text-xs text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
             {isSalesman ? 'Your Van Sales Total:' : 'Total Invoiced:'}{' '}
             <span className="font-mono font-bold text-slate-900 dark:text-white">
-              {company.currencySymbol} {totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              {company.currencySymbol || 'AED'} {totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Adjustable Columns Data Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold">
+        <div className="overflow-x-auto w-full">
+          <table
+            className="text-xs text-left table-fixed border-collapse"
+            style={{ width: `${Math.max(1050, totalTableWidth)}px` }}
+          >
+            <colgroup>
+              <col style={{ width: `${widths.date}px` }} />
+              <col style={{ width: `${widths.number}px` }} />
+              <col style={{ width: `${widths.customer}px` }} />
+              <col style={{ width: `${widths.location}px` }} />
+              <col style={{ width: `${widths.reference}px` }} />
+              <col style={{ width: `${widths.tax}px` }} />
+              <col style={{ width: `${widths.grandTotal}px` }} />
+              <col style={{ width: `${widths.action}px` }} />
+            </colgroup>
+            <thead className="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold select-none">
               <tr>
-                <th className="py-3 px-4 w-28">Invoice Date</th>
-                <th className="py-3 px-4 w-32">Invoice Number</th>
-                <th className="py-3 px-4">Customer Party</th>
-                <th className="py-3 px-4">Fulfilled From (Location)</th>
-                <th className="py-3 px-4">Reference</th>
-                <th className="py-3 px-4 text-right">Tax ({company.currencySymbol})</th>
-                <th className="py-3 px-4 text-right">Grand Total ({company.currencySymbol})</th>
-                <th className="py-3 px-4 text-center">Action</th>
+                <th className="py-3 px-3.5 relative whitespace-nowrap">
+                  <span>Invoice Date</span>
+                  <ResizeHandle colKey="date" />
+                </th>
+                <th className="py-3 px-3.5 relative whitespace-nowrap">
+                  <span>Invoice Number</span>
+                  <ResizeHandle colKey="number" />
+                </th>
+                <th className="py-3 px-3.5 relative whitespace-nowrap">
+                  <span>Customer Party</span>
+                  <ResizeHandle colKey="customer" />
+                </th>
+                <th className="py-3 px-3.5 relative whitespace-nowrap">
+                  <span>Fulfilled From (Location)</span>
+                  <ResizeHandle colKey="location" />
+                </th>
+                <th className="py-3 px-3.5 relative whitespace-nowrap">
+                  <span>Reference</span>
+                  <ResizeHandle colKey="reference" />
+                </th>
+                <th className="py-3 px-3.5 text-right relative whitespace-nowrap">
+                  <span>Tax ({company.currencySymbol || 'AED'})</span>
+                  <ResizeHandle colKey="tax" />
+                </th>
+                <th className="py-3 px-3.5 text-right relative whitespace-nowrap">
+                  <span>Grand Total ({company.currencySymbol || 'AED'})</span>
+                  <ResizeHandle colKey="grandTotal" />
+                </th>
+                <th className="py-3 px-3.5 text-center relative whitespace-nowrap">
+                  <span>Action</span>
+                  <ResizeHandle colKey="action" />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -241,43 +333,57 @@ export const SalesInvoicesView: React.FC = () => {
               ) : (
                 filtered.map(v => (
                   <tr key={v.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono text-slate-500 dark:text-slate-400">{v.date}</td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400 block">{v.voucherNumber}</span>
+                    <td className="py-3 px-3.5 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      {v.date}
+                    </td>
+                    <td className="py-3 px-3.5">
+                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400 block whitespace-nowrap">
+                        {v.voucherNumber}
+                      </span>
                       <div className="mt-1 flex items-center gap-1 flex-wrap">
                         {v.backendId ? (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
                             DB #{v.backendId} · {v.source || 'WEB_APP'}
                           </span>
                         ) : (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
                             Local Pending
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className="font-bold text-slate-900 dark:text-white block">{v.partyName || 'Cash Sale'}</span>
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-xs block">{v.narration}</span>
+                    <td className="py-3 px-3.5">
+                      <span className="font-bold text-slate-900 dark:text-white block truncate" title={v.partyName || 'Cash Sale'}>
+                        {v.partyName || 'Cash Sale'}
+                      </span>
+                      {v.narration && (
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate block max-w-full" title={v.narration}>
+                          {v.narration}
+                        </span>
+                      )}
                     </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-1.5">
+                    <td className="py-3 px-3.5 text-slate-600 dark:text-slate-400">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
                         {v.vehicleId ? (
                           <Truck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                         ) : (
                           <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         )}
-                        <span className="text-[11.5px]">{v.locationName || 'Central Warehouse'}</span>
+                        <span className="text-[11.5px] font-medium text-slate-800 dark:text-slate-200 truncate">
+                          {v.locationName || 'Central Warehouse'}
+                        </span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-500 dark:text-slate-400">{v.referenceNumber || '-'}</td>
-                    <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400">
-                      {v.taxTotal !== undefined ? v.taxTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}
+                    <td className="py-3 px-3.5 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap truncate">
+                      {v.referenceNumber || '-'}
                     </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white text-sm">
-                      {v.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    <td className="py-3 px-3.5 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                      {v.taxTotal !== undefined ? v.taxTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                     </td>
-                    <td className="py-3 px-4 text-center">
+                    <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 dark:text-white text-sm whitespace-nowrap">
+                      {v.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3 px-3.5 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => setInvoiceToView(v)}

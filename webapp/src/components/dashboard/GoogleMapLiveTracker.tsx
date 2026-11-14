@@ -121,7 +121,7 @@ const resolveStopsForVan = (van?: VanTelemetry | null, vanId?: string): Delivery
 };
 
 export const GoogleMapLiveTracker: React.FC = () => {
-  const { currentUser, theme, setCurrentView, goBack } = useErp();
+  const { currentUser, theme, setCurrentView, goBack, company } = useErp();
   const isSalesman = currentUser?.role === 'salesman_pos';
 
   // Map Container & Instances
@@ -739,7 +739,7 @@ export const GoogleMapLiveTracker: React.FC = () => {
           <div style="font-size:11px;color:#475569;margin-bottom:6px;">${stop.address}</div>
           ${
             stop.amount
-              ? `<div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:4px;">Order Value: ₹${stop.amount.toLocaleString()}</div>`
+              ? `<div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:4px;">Order Value: ${company.currencySymbol} ${stop.amount.toLocaleString()}</div>`
               : ''
           }
           ${
@@ -1331,7 +1331,7 @@ export const GoogleMapLiveTracker: React.FC = () => {
                           <p className="text-[10px] text-slate-500 dark:text-slate-400">
                             {stop.status === 'completed'
                               ? stop.amount
-                                ? `Delivered (₹${stop.amount.toLocaleString()})`
+                                ? `Delivered (${company.currencySymbol} ${stop.amount.toLocaleString()})`
                                 : 'Dispatched'
                               : stop.status === 'en_route'
                               ? 'En Route (Next)'

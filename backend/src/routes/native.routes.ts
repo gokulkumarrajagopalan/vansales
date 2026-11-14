@@ -3,6 +3,7 @@ import { AuthController } from '../controllers/auth.controller.js';
 import { query } from '../db/pool.js';
 import { StockController } from '../controllers/stock.controller.js';
 import { TrackingController } from '../controllers/tracking.controller.js';
+import { authenticateJwt } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -12,17 +13,18 @@ router.post('/auth/logout', (_req: Request, res: Response) => {
   return res.status(200).json({ success: true, message: 'Logged out successfully' });
 });
 
-// 2. Companies
+// 2. Companies & Base Currency Management
 router.get('/companies', async (_req: Request, res: Response) => {
   try {
-    const r = await query('SELECT cmpid as id, name, code, status, country, currency_symbol as "currencySymbol" FROM public.companies ORDER BY cmpid ASC');
+    const r = await query('SELECT cmpid as id, name, code, status, country, currency_symbol as "currencySymbol", currency_formal_name as "currencyCode" FROM public.companies ORDER BY cmpid ASC');
     const companies = r.rows.map(row => ({
       id: String(row.id),
       name: row.name,
       code: row.code,
       status: row.status || 'ACTIVE',
-      country: row.country || 'India',
-      currencySymbol: row.currencySymbol || '₹',
+      country: row.country || 'United Arab Emirates',
+      currencySymbol: row.currencySymbol || 'AED',
+      currencyCode: row.currencyCode || 'AED',
     }));
     return res.status(200).json({
       success: true,
@@ -36,14 +38,15 @@ router.get('/companies', async (_req: Request, res: Response) => {
 
 router.get('/companies/user/:userId', async (req: Request, res: Response) => {
   try {
-    const r = await query('SELECT cmpid as id, name, code, status, country, currency_symbol as "currencySymbol" FROM public.companies ORDER BY cmpid ASC');
+    const r = await query('SELECT cmpid as id, name, code, status, country, currency_symbol as "currencySymbol", currency_formal_name as "currencyCode" FROM public.companies ORDER BY cmpid ASC');
     const companies = r.rows.map(row => ({
       id: String(row.id),
       name: row.name,
       code: row.code,
       status: row.status || 'ACTIVE',
-      country: row.country || 'India',
-      currencySymbol: row.currencySymbol || '₹',
+      country: row.country || 'United Arab Emirates',
+      currencySymbol: row.currencySymbol || 'AED',
+      currencyCode: row.currencyCode || 'AED',
     }));
     return res.status(200).json({
       success: true,
@@ -52,6 +55,40 @@ router.get('/companies/user/:userId', async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message, companies: [] });
+  }
+});
+
+// Update company profile and base currency (Admin action, flows down to all subsequent van accounts)
+router.put('/companies/:id', authenticateJwt, async (req: Request, res: Response) => {
+  try {
+    const cmpId = parseInt(req.params.id, 10);
+    const { name, currency, currencySymbol, country, address, taxNumber, phone, email } = req.body;
+    const r = await query(
+      `UPDATE public.companies
+       SET name = COALESCE($1, name),
+           currency_formal_name = COALESCE($2, currency_formal_name),
+           currency_symbol = COALESCE($3, currency_symbol),
+           country = COALESCE($4, country),
+           address_line_1 = COALESCE($5, address_line_1),
+           pan_number = COALESCE($6, pan_number),
+           telephone = COALESCE($7, telephone),
+           email = COALESCE($8, email),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE cmpid = $9
+       RETURNING cmpid as id, name, code, status, country, currency_symbol as "currencySymbol", currency_formal_name as "currencyCode"`,
+      [name, currency, currencySymbol, country, address, taxNumber, phone, email, cmpId]
+    );
+    if (r.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Company not found' });
+    }
+    const updated = r.rows[0];
+    return res.status(200).json({
+      success: true,
+      message: `Base currency updated to ${updated.currencySymbol} (${updated.currencyCode}). All van accounts will use this currency.`,
+      company: updated,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 

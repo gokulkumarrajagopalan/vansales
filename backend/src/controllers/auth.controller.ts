@@ -58,6 +58,17 @@ export class AuthController {
       const companyId = parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
       const companyCode = process.env.DEFAULT_COMPANY_CODE || '30449';
 
+      const cmpRes = await query(
+        `SELECT cmpid, name, code, currency_symbol, currency_formal_name, country
+         FROM public.companies
+         WHERE cmpid = $1
+         LIMIT 1`,
+        [companyId]
+      );
+      const companyRow = cmpRes.rows[0];
+      const currencySymbol = companyRow?.currency_symbol || 'AED';
+      const currencyCode = companyRow?.currency_formal_name || 'AED';
+
       const tokenPayload = {
         userId: user.userid,
         username: user.username,
@@ -65,6 +76,9 @@ export class AuthController {
         role: user.role || 'VAN_REP',
         companyId,
         companyCode,
+        companyName: companyRow?.name || 'Talliffy Demo Company',
+        currency: currencyCode,
+        currencySymbol,
         godownName: user.van_godown_name || 'Van 01 Godown',
       };
 
@@ -84,6 +98,11 @@ export class AuthController {
         role: user.role || 'VAN_REP',
         licenceNo: user.licence_no ? String(user.licence_no) : '',
         mobile: user.mobile,
+        companyId,
+        companyCode,
+        companyName: companyRow?.name || 'Talliffy Demo Company',
+        currency: currencyCode,
+        currencySymbol,
         data: {
           token,
           deviceToken: '',
@@ -94,6 +113,9 @@ export class AuthController {
           role: user.role || 'VAN_REP',
           mobile: user.mobile,
           licenceNo: user.licence_no ? String(user.licence_no) : '',
+          currency: currencyCode,
+          currencySymbol,
+          companyName: companyRow?.name || 'Talliffy Demo Company',
           user: {
             id: user.userid,
             username: user.username,
@@ -104,6 +126,8 @@ export class AuthController {
             godownName: user.van_godown_name || 'Van 01 Godown',
             companyId,
             companyCode,
+            currency: currencyCode,
+            currencySymbol,
           },
         },
       });

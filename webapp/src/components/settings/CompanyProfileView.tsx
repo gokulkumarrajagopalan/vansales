@@ -21,16 +21,16 @@ export const CompanyProfileView: React.FC = () => {
   const [fiscalYearEnd, setFiscalYearEnd] = useState(company.fiscalYearEnd);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCompany({
+    const updated = {
       ...company,
       name,
       tradeName,
       taxNumber,
       registrationNumber,
-      currency,
-      currencySymbol,
+      currency: (currency || 'AED').toUpperCase(),
+      currencySymbol: currencySymbol || 'AED',
       email,
       phone,
       address,
@@ -39,7 +39,36 @@ export const CompanyProfileView: React.FC = () => {
       postalCode,
       fiscalYearStart,
       fiscalYearEnd,
-    });
+    };
+    setCompany(updated);
+    try {
+      localStorage.setItem('apex_erp_company', JSON.stringify(updated));
+    } catch (e) {}
+
+    // Persist base currency and profile to server database so all van accounts immediately follow it
+    try {
+      const token = localStorage.getItem('apex_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+      await fetch('/api/companies/12', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name,
+          currency: (currency || 'AED').toUpperCase(),
+          currencySymbol: currencySymbol || 'AED',
+          country: updated.country || 'United Arab Emirates',
+          address,
+          taxNumber,
+          phone,
+          email,
+        }),
+      });
+    } catch (err) {
+      console.warn('Could not sync company profile to backend:', err);
+    }
+
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };

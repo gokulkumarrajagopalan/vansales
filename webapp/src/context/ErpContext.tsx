@@ -411,12 +411,41 @@ export const ErpProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const parsed = JSON.parse(saved);
         if (parsed.name && !parsed.name.includes('Apex')) {
+          if (parsed.currencySymbol === '₹' || parsed.currency === 'INR') {
+            parsed.currency = 'AED';
+            parsed.currencySymbol = 'AED';
+            parsed.country = 'United Arab Emirates';
+            try { localStorage.setItem('apex_erp_company', JSON.stringify(parsed)); } catch (e) {}
+          }
           return parsed;
         }
       } catch (e) {}
     }
     return initialCompany;
   });
+
+  // Base Currency Concept: Always pull and mirror Admin's configured base currency from backend
+  useEffect(() => {
+    fetch('/api/companies')
+      .then(res => res.json())
+      .then(data => {
+        const cmp = data?.companies?.[0] || data?.data?.[0];
+        if (cmp && cmp.currencySymbol) {
+          setCompany(prev => {
+            const next = {
+              ...prev,
+              name: cmp.name || prev.name,
+              currency: cmp.currencyCode || cmp.currencySymbol || 'AED',
+              currencySymbol: cmp.currencySymbol || 'AED',
+              country: cmp.country || prev.country || 'United Arab Emirates',
+            };
+            try { localStorage.setItem('apex_erp_company', JSON.stringify(next)); } catch (e) {}
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [ledgers, setLedgers] = useState<LedgerAccount[]>(() =>
     safeParseStorage('apex_erp_ledgers', initialLedgers)
