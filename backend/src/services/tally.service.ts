@@ -572,6 +572,51 @@ export class TallyService {
   }
 
   /**
+   * Acknowledge Vouchers imported into Tally
+   */
+  static async acknowledgeVouchers(companyId: number, vouchers: Array<{
+    voucherNumber?: string;
+    guid?: string;
+    tallyGuid?: string;
+    status?: 'SYNCED' | 'FAILED_VALIDATION' | 'READY';
+    errorMessage?: string;
+  }>) {
+    if (!Array.isArray(vouchers) || vouchers.length === 0) {
+      return { isValid: false, message: 'No vouchers provided for acknowledgement', errorCode: 'EMPTY_PAYLOAD', data: null };
+    }
+
+    let updatedCount = 0;
+    for (const v of vouchers) {
+      const vNum = v.voucherNumber?.trim();
+      const guid = v.guid?.trim();
+      const tallyGuid = v.tallyGuid?.trim() || null;
+      const status = v.status || 'SYNCED';
+      const errMsg = v.errorMessage || null;
+
+      if (!vNum && !guid) continue;
+
+      const res = await query(
+        `UPDATE vouchers 
+         SET sync_status = $1, 
+             tally_sync_status = CASE WHEN $1 = 'SYNCED' THEN 'synced' ELSE 'failed' END,
+             tally_guid = COALESCE($2, tally_guid),
+             sync_error_message = COALESCE($3, sync_error_message),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE cmp_id = $4 AND (voucher_number = $5 OR guid = $6)`,
+        [status, tallyGuid, errMsg, companyId, vNum || '', guid || '']
+      );
+      if ((res.rowCount || 0) > 0) updatedCount += res.rowCount || 0;
+    }
+
+    return {
+      isValid: true,
+      message: `Successfully acknowledged ${updatedCount} voucher(s)`,
+      errorCode: null,
+      data: { updatedCount, totalProcessed: vouchers.length }
+    };
+  }
+
+  /**
    * Generates standard Tally XML envelope for Sales & Receipt vouchers
    */
   static async exportVouchersXml(companyId: number, fromDate?: string, toDate?: string): Promise<string> {

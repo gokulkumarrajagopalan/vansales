@@ -14,6 +14,7 @@ router.post('/Ping', authenticateTally, TallyController.ping);
 router.post('/SalesVouchers', authenticateTally, TallyController.getSalesVouchers);
 router.post('/ReceiptVouchers', authenticateTally, TallyController.getReceiptVouchers);
 router.post('/StockJournalVouchers', authenticateTally, TallyController.getStockJournalVouchers);
+router.post('/AcknowledgeVouchers', authenticateTally, TallyController.acknowledgeVouchers);
 
 // 4. Masters Read (Export to Tally)
 router.post('/Customers', authenticateTally, TallyController.getCustomers);

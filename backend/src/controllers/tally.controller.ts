@@ -189,6 +189,22 @@ export class TallyController {
     }
   }
 
+  static async acknowledgeVouchers(req: Request, res: Response) {
+    try {
+      const companyId = req.companyId || parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
+      const { vouchers } = req.body || {};
+      const result = await TallyService.acknowledgeVouchers(companyId, vouchers);
+      return res.status(result.isValid ? 200 : 400).json(result);
+    } catch (err: any) {
+      return res.status(500).json({
+        isValid: false,
+        message: err.message,
+        errorCode: 'ACKNOWLEDGE_FAILED',
+        data: null,
+      });
+    }
+  }
+
   static async exportVouchersXml(req: Request, res: Response) {
     try {
       const companyId = req.companyId || parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
