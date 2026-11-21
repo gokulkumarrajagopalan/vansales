@@ -19,7 +19,7 @@
 ;; Configuration Storage & Variables (Zero-Password Company API Token)
 ;; =============================================================================
 [System: Variable]
-    TalliffyApiUrl   : "http://66.116.232.161:8088/api/tally"
+    TalliffyApiUrl   : "https://vansales.talliffy.com/api/tally"
     TalliffyApiToken : "tal_live_cmp12_..."
 
 [Variable: TalliffyApiUrl]

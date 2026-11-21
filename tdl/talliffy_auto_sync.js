@@ -11,31 +11,33 @@
  */
 
 const http = require('http');
+const https = require('https');
 
 const CONFIG = {
   tallyHost: '127.0.0.1',
   tallyPort: 9000,
-  talliffyApiUrl: 'http://66.116.232.161:8088/api/tally',
+  talliffyApiUrl: 'https://vansales.talliffy.com/api/tally',
   // Dedicated Company API Token (Zero Password required)
-  companyToken: process.env.TALLIFFY_COMPANY_TOKEN || 'tal_live_cmp12_...',
+  companyToken: process.env.TALLIFFY_COMPANY_TOKEN || 'tal_live_cmp12_79ea2183cb7b4ae6f1d99ffad03ec2be1226a5f544022322',
   apiKey: 'VB-API-KEY-998877',
   userId: 'admin',
   password: 'AdminPassword123!',
 };
 
-// 1. Helper: HTTP Request
+// 1. Helper: HTTP / HTTPS Request
 function sendHttpRequest(urlStr, method, headers, postData) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlStr);
+    const client = url.protocol === 'https:' ? https : http;
     const options = {
       hostname: url.hostname,
-      port: url.port,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
       path: url.pathname + url.search,
       method: method,
       headers: headers || {},
     };
 
-    const req = http.request(options, (res) => {
+    const req = client.request(options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
