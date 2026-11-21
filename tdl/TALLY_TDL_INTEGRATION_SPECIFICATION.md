@@ -41,86 +41,88 @@ Talliffy Van Sales ERP manages mobile van inventory, on-the-road sales invoices,
 
 ---
 
-## 2. Authentication & JWT Token Flow
+## 2. Multi-Company Architecture & Authentication Flow
 
-Every request to data endpoints requires a standard **JSON Web Token (JWT)** passed in the `Authorization` HTTP header.
+Talliffy is a multi-company, multi-tenant ERP platform. Each enterprise company operates in complete data isolation.
 
-### Method 1: Dedicated Tally Connector Authentication (Recommended for TDL)
+When multiple companies exist in Talliffy:
+* **Each Company Admin / User** logs in with their own assigned username and password.
+* The API dynamically resolves the user's registered company and issues a scoped JWT Bearer Token.
+* All data requests (`/SalesVouchers`, `/ReceiptVouchers`, `/StockItems`, `/Customers`, `/Godowns`, `/AcknowledgeVouchers`) are strictly filtered to the authenticated company (`cmp_id`).
+* Cross-company data leaks are impossible; Company A will only ever see Company A's vouchers, stock, and customers.
+
+---
+
+### 2.1 Authenticating as a Company Admin / User (Primary Method)
+
+Each company administrator connects using their own ERP credentials. If an admin manages multiple companies, they can specify the target `companyId` or `companyCode`.
 
 * **Endpoint:** `POST /api/tally/Auth`
 * **Content-Type:** `application/json`
-* **Authentication Required:** No (Public handshake)
 
 #### Request Payload:
 ```json
 {
-  "userId": "tally_connector",
-  "password": "StrongPassword123!",
-  "apiKey": "VB-API-KEY-998877"
+  "username": "company_admin_user",
+  "password": "AdminPassword123!",
+  "companyId": 12,           
+  "companyCode": "30449"     
 }
 ```
+*(Note: `companyId` and `companyCode` are optional. If omitted, the system automatically selects the company owned by this user).*
 
 #### Response (HTTP 200 OK):
 ```json
 {
   "isValid": true,
-  "message": "Authenticated successfully",
+  "message": "Authenticated successfully for Talliffy Demo Company (Company #12)",
   "errorCode": null,
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjAsInVzZXJuYW1lIjoidGFsbHlfY29ubmVjdG9yIiwicm9sZSI6IlRBTExZX0NPTk5FQ1RPUiIsImNvbXBhbnlJZCI6MTIsImlhdCI6MTc5NTI0Njk3MCwiZXhwIjoxNzk1MjUwNTcwfQ.4r27qvCYazBNkUhJnIWPP_Ax_LcelN6z6DBDa82rgkg",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "companyId": 12,
+    "companyCode": "30449",
+    "companyName": "Talliffy Demo Company",
+    "userId": 5,
+    "username": "company_admin_user",
+    "role": "ADMIN",
     "expiresInSeconds": 3600,
     "tokenType": "Bearer"
   }
 }
 ```
 
-#### Response Fields:
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `isValid` | Boolean | `true` if authentication succeeded, `false` otherwise. |
-| `data.token` | String | **The JWT Bearer token** to store and use for all subsequent calls. |
-| `data.tokenType` | String | Always `"Bearer"`. |
-| `data.expiresInSeconds` | Number | Token lifespan (3600 seconds = 1 hour). Re-authenticate when expired. |
-
 ---
 
-### Method 2: Standard User Authentication (Alternative)
+### 2.2 System Connector Handshake (Alternative with Company Selection)
 
-If you prefer logging in using administrative ERP credentials:
-* **Endpoint:** `POST /api/auth/login`
+If using a designated system connector key, specify the target `companyId` or `companyCode`:
+
+* **Endpoint:** `POST /api/tally/Auth`
 * **Content-Type:** `application/json`
 
 #### Request Payload:
 ```json
 {
-  "username": "admin",
-  "password": "<admin_password>"
-}
-```
-
-#### Response (HTTP 200 OK):
-```json
-{
-  "isValid": true,
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "companyId": 12,
-  "companyName": "Talliffy Distribution & Van Sales Ltd.",
-  "role": "ADMIN"
+  "userId": "tally_connector",
+  "password": "StrongPassword123!",
+  "apiKey": "VB-API-KEY-998877",
+  "companyId": 12
 }
 ```
 
 ---
 
-### How to Send the Token in Subsequent Requests
+### 2.3 How to Pass the Token in Subsequent Requests
 
-For **all** requests to data and sync endpoints, include the token in the HTTP Request Header:
+For **all** subsequent requests to pull transactions, import masters, or acknowledge entries, attach the token in the HTTP Request Header:
 
 ```http
 Authorization: Bearer <data.token>
 Content-Type: application/json
 Accept: application/json
 ```
+
+Because the `companyId` is cryptographically signed inside `<data.token>`, every subsequent call automatically isolates data strictly to that company.
 
 ---
 
