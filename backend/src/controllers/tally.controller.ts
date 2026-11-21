@@ -4,8 +4,14 @@ import { TallyService } from '../services/tally.service.js';
 export class TallyController {
   static async auth(req: Request, res: Response) {
     try {
-      const { userId, password, apiKey } = req.body;
-      const result = TallyService.authenticate(userId, password, apiKey);
+      const { userId, username, password, apiKey, companyId, companyCode } = req.body;
+      const result = await TallyService.authenticate(
+        userId || username,
+        password,
+        apiKey,
+        companyId,
+        companyCode
+      );
       const statusCode = result.isValid ? 200 : 401;
       return res.status(statusCode).json(result);
     } catch (err: any) {

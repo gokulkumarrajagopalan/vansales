@@ -87,7 +87,9 @@ export function authenticateTally(req: Request, res: Response, next: NextFunctio
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    if (decoded.role !== 'TALLY_CONNECTOR' && decoded.role !== 'ADMIN') {
+    const allowedTallyRoles = ['TALLY_CONNECTOR', 'ADMIN', 'ACCOUNTANT', 'MANAGER', 'SUPER_ADMIN'];
+    const userRole = (decoded.role || '').toUpperCase();
+    if (!allowedTallyRoles.includes(userRole)) {
       return res.status(403).json({
         isValid: false,
         message: 'Invalid permissions for Tally integration',
@@ -96,7 +98,7 @@ export function authenticateTally(req: Request, res: Response, next: NextFunctio
       });
     }
     req.user = decoded;
-    req.companyId = decoded.companyId || parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
+    req.companyId = Number(decoded.companyId) || parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
     next();
   } catch (err: any) {
     return res.status(401).json({

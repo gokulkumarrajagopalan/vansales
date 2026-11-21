@@ -58,17 +58,47 @@ export class AuthController {
         });
       }
 
-      const companyId = parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
-      const companyCode = process.env.DEFAULT_COMPANY_CODE || '30449';
-
-      const cmpRes = await query(
+      // Determine company for this user or their parent admin
+      const effectiveAdminId = user.parent_user_id || user.userid;
+      let cmpRes = await query(
         `SELECT cmpid, name, code, currency_symbol, currency_formal_name, country
          FROM public.companies
-         WHERE cmpid = $1
+         WHERE userid = $1 OR userid = $2
+         ORDER BY cmpid ASC
          LIMIT 1`,
-        [companyId]
+        [user.userid, effectiveAdminId]
       );
+
+      // If not found by user relation, check if companyId or companyCode was passed in request
+      if (cmpRes.rows.length === 0 && (req.body.companyId || req.body.companyCode)) {
+        if (req.body.companyId) {
+          cmpRes = await query(
+            `SELECT cmpid, name, code, currency_symbol, currency_formal_name, country
+             FROM public.companies WHERE cmpid = $1 LIMIT 1`,
+            [Number(req.body.companyId)]
+          );
+        } else if (req.body.companyCode) {
+          cmpRes = await query(
+            `SELECT cmpid, name, code, currency_symbol, currency_formal_name, country
+             FROM public.companies WHERE LOWER(code) = LOWER($1) LIMIT 1`,
+            [String(req.body.companyCode).trim()]
+          );
+        }
+      }
+
+      // If still not found, fallback to default company
+      if (cmpRes.rows.length === 0) {
+        const defaultCmpId = parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
+        cmpRes = await query(
+          `SELECT cmpid, name, code, currency_symbol, currency_formal_name, country
+           FROM public.companies WHERE cmpid = $1 LIMIT 1`,
+          [defaultCmpId]
+        );
+      }
+
       const companyRow = cmpRes.rows[0];
+      const companyId = companyRow ? Number(companyRow.cmpid) : parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
+      const companyCode = companyRow?.code || process.env.DEFAULT_COMPANY_CODE || '30449';
       const currencySymbol = companyRow?.currency_symbol || 'AED';
       const currencyCode = companyRow?.currency_formal_name || 'AED';
 

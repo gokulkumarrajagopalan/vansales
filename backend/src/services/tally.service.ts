@@ -1,5 +1,6 @@
 import { query } from '../db/pool.js';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { DoubleEntryService, LedgerEntryItem } from './double-entry.service.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'vansales_pro_enterprise_jwt_super_secret_key_2026!';
@@ -9,24 +10,159 @@ const TALLY_PASSWORD = process.env.TALLY_PASSWORD || 'StrongPassword123!';
 
 export class TallyService {
   /**
-   * Authenticates Tally TDL connector client.
+   * Authenticates Tally TDL connector client or individual Company Admin / User.
+   * Enables multi-company support: each company admin authenticates with their own credentials
+   * or specifies their companyId / companyCode to sync strictly their company's data.
    */
-  static authenticate(userId?: string, password?: string, apiKey?: string) {
-    if (userId !== TALLY_USER_ID || password !== TALLY_PASSWORD || apiKey !== TALLY_API_KEY) {
+  static async authenticate(
+    userId?: string,
+    password?: string,
+    apiKey?: string,
+    requestedCompanyId?: number | string,
+    requestedCompanyCode?: string
+  ) {
+    if (!userId || !password) {
       return {
         isValid: false,
-        message: 'Invalid Tally connector credentials or API key',
+        message: 'Username/UserId and password are required',
+        errorCode: 'INVALID_INPUT',
+        data: null,
+      };
+    }
+
+    const cleanUser = String(userId).trim();
+
+    // 1. Check if authenticating via standard Company Admin / User account
+    const userRes = await query(
+      `SELECT userid, username, password, email, role, parent_user_id, isactive
+       FROM users
+       WHERE LOWER(username) = LOWER($1) 
+          OR LOWER(email) = LOWER($1)
+          OR (LOWER($1) IN ('admin', 'admin1') AND LOWER(username) IN ('admin', 'admin1'))
+       ORDER BY userid ASC LIMIT 1`,
+      [cleanUser]
+    );
+
+    let authenticatedUser: any = null;
+    let effectiveCompany: any = null;
+
+    if (userRes.rows.length > 0) {
+      const user = userRes.rows[0];
+      let isMatch = false;
+
+      if (user.password && (user.password.startsWith('$2a$') || user.password.startsWith('$2b$'))) {
+        isMatch = await bcrypt.compare(password, user.password);
+      } else {
+        isMatch = user.password === password;
+      }
+
+      if (isMatch) {
+        authenticatedUser = user;
+        const effectiveAdminId = user.parent_user_id || user.userid;
+
+        // Determine company for this user
+        if (requestedCompanyId) {
+          const cmpRes = await query(
+            `SELECT cmpid, name, code, currency_symbol, currency_formal_name
+             FROM companies
+             WHERE cmpid = $1 AND (userid = $2 OR userid = $3)
+             LIMIT 1`,
+            [Number(requestedCompanyId), user.userid, effectiveAdminId]
+          );
+          if (cmpRes.rows.length > 0) effectiveCompany = cmpRes.rows[0];
+        } else if (requestedCompanyCode) {
+          const cmpRes = await query(
+            `SELECT cmpid, name, code, currency_symbol, currency_formal_name
+             FROM companies
+             WHERE LOWER(code) = LOWER($1) AND (userid = $2 OR userid = $3)
+             LIMIT 1`,
+            [String(requestedCompanyCode).trim(), user.userid, effectiveAdminId]
+          );
+          if (cmpRes.rows.length > 0) effectiveCompany = cmpRes.rows[0];
+        }
+
+        // If not explicitly requested or found above, find the user's primary company
+        if (!effectiveCompany) {
+          const cmpRes = await query(
+            `SELECT cmpid, name, code, currency_symbol, currency_formal_name
+             FROM companies
+             WHERE userid = $1 OR userid = $2
+             ORDER BY cmpid ASC
+             LIMIT 1`,
+            [user.userid, effectiveAdminId]
+          );
+          if (cmpRes.rows.length > 0) effectiveCompany = cmpRes.rows[0];
+        }
+      }
+    }
+
+    // 2. Check if authenticating via connector credentials
+    if (!authenticatedUser) {
+      const isConnectorUser = cleanUser === TALLY_USER_ID && password === TALLY_PASSWORD;
+      const isKeyValid = apiKey === TALLY_API_KEY;
+
+      if (isConnectorUser && isKeyValid) {
+        authenticatedUser = {
+          userid: 0,
+          username: TALLY_USER_ID,
+          role: 'TALLY_CONNECTOR',
+        };
+
+        if (requestedCompanyId) {
+          const cmpRes = await query(
+            `SELECT cmpid, name, code, currency_symbol, currency_formal_name
+             FROM companies WHERE cmpid = $1 LIMIT 1`,
+            [Number(requestedCompanyId)]
+          );
+          if (cmpRes.rows.length > 0) effectiveCompany = cmpRes.rows[0];
+        } else if (requestedCompanyCode) {
+          const cmpRes = await query(
+            `SELECT cmpid, name, code, currency_symbol, currency_formal_name
+             FROM companies WHERE LOWER(code) = LOWER($1) LIMIT 1`,
+            [String(requestedCompanyCode).trim()]
+          );
+          if (cmpRes.rows.length > 0) effectiveCompany = cmpRes.rows[0];
+        }
+      }
+    }
+
+    if (!authenticatedUser) {
+      return {
+        isValid: false,
+        message: 'Invalid credentials or permissions for Tally sync',
         errorCode: 'AUTH_FAILED',
         data: null,
       };
     }
 
+    // Fallback company if not found (e.g., initial single-company setup)
+    if (!effectiveCompany) {
+      const defaultCmpId = parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10);
+      const cmpRes = await query(
+        `SELECT cmpid, name, code, currency_symbol, currency_formal_name
+         FROM companies WHERE cmpid = $1 LIMIT 1`,
+        [defaultCmpId]
+      );
+      effectiveCompany = cmpRes.rows[0] || {
+        cmpid: defaultCmpId,
+        name: 'Talliffy Enterprise',
+        code: process.env.DEFAULT_COMPANY_CODE || '30449',
+      };
+    }
+
+    const companyId = Number(effectiveCompany.cmpid);
+    const companyCode = effectiveCompany.code || '';
+    const companyName = effectiveCompany.name || '';
+    const userRole = (authenticatedUser.role || 'ADMIN').toUpperCase();
+
     const token = jwt.sign(
       {
-        userId: 0,
-        username: TALLY_USER_ID,
-        role: 'TALLY_CONNECTOR',
-        companyId: parseInt(process.env.DEFAULT_COMPANY_ID || '12', 10),
+        userId: Number(authenticatedUser.userid),
+        username: authenticatedUser.username,
+        role: userRole,
+        companyId,
+        companyCode,
+        companyName,
       },
       JWT_SECRET,
       { expiresIn: '1h' }
@@ -34,10 +170,16 @@ export class TallyService {
 
     return {
       isValid: true,
-      message: 'Authenticated successfully',
+      message: `Authenticated successfully for ${companyName} (Company #${companyId})`,
       errorCode: null,
       data: {
         token,
+        companyId,
+        companyCode,
+        companyName,
+        userId: Number(authenticatedUser.userid),
+        username: authenticatedUser.username,
+        role: userRole,
         expiresInSeconds: 3600,
         tokenType: 'Bearer',
       },
