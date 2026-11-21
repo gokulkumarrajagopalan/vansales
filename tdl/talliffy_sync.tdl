@@ -16,27 +16,17 @@
     Item: "5. Configure Talliffy API Endpoint"                        : Modify : TalliffyConfigReport
 
 ;; =============================================================================
-;; Configuration Storage & Variables
+;; Configuration Storage & Variables (Zero-Password Company API Token)
 ;; =============================================================================
 [System: Variable]
-    TalliffyApiUrl   : "http://localhost:8080/api/tally"
-    TalliffyApiKey   : "VB-API-KEY-998877"
-    TalliffyUser     : "tally_connector"
-    TalliffyPass     : "StrongPassword123!"
+    TalliffyApiUrl   : "http://66.116.232.161:8088/api/tally"
+    TalliffyApiToken : "tal_live_cmp12_..."
 
 [Variable: TalliffyApiUrl]
     Type: String
     Persistent: Yes
 
-[Variable: TalliffyApiKey]
-    Type: String
-    Persistent: Yes
-
-[Variable: TalliffyUser]
-    Type: String
-    Persistent: Yes
-
-[Variable: TalliffyPass]
+[Variable: TalliffyApiToken]
     Type: String
     Persistent: Yes
 
@@ -50,10 +40,10 @@
 [Form: TalliffyConfigForm]
     Part: TalliffyConfigPart
     Width: 60% Screen
-    Height: 40% Screen
+    Height: 35% Screen
 
 [Part: TalliffyConfigPart]
-    Line: TalliffyUrlLine, TalliffyKeyLine, TalliffyUserLine, TalliffyPassLine
+    Line: TalliffyUrlLine, TalliffyTokenLine
 
 [Line: TalliffyUrlLine]
     Field: Medium Prompt, TalliffyUrlField
@@ -65,35 +55,15 @@
     Width: 40
     Set as: ##TalliffyApiUrl
 
-[Line: TalliffyKeyLine]
-    Field: Medium Prompt, TalliffyKeyField
-    Local: Field: Medium Prompt: Set as: "API Secret Key:"
+[Line: TalliffyTokenLine]
+    Field: Medium Prompt, TalliffyTokenField
+    Local: Field: Medium Prompt: Set as: "Company API Token:"
 
-[Field: TalliffyKeyField]
+[Field: TalliffyTokenField]
     Use: Name Field
-    Modifies: TalliffyApiKey
-    Width: 30
-    Set as: ##TalliffyApiKey
-
-[Line: TalliffyUserLine]
-    Field: Medium Prompt, TalliffyUserField
-    Local: Field: Medium Prompt: Set as: "Connector Username:"
-
-[Field: TalliffyUserField]
-    Use: Name Field
-    Modifies: TalliffyUser
-    Width: 30
-    Set as: ##TalliffyUser
-
-[Line: TalliffyPassLine]
-    Field: Medium Prompt, TalliffyPassField
-    Local: Field: Medium Prompt: Set as: "Connector Password:"
-
-[Field: TalliffyPassField]
-    Use: Password Field
-    Modifies: TalliffyPass
-    Width: 30
-    Set as: ##TalliffyPass
+    Modifies: TalliffyApiToken
+    Width: 50
+    Set as: ##TalliffyApiToken
 
 ;; =============================================================================
 ;; Collections for Extraction (Godowns, Sundry Debtors/Parties, Stock Items)

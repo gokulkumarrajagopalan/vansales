@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { query } from '../db/pool.js';
 import { DoubleEntryService } from '../services/double-entry.service.js';
+import { CompanyTokenService } from '../services/company-token.service.js';
 
 export class TallyAdminController {
   static async getSyncStatus(req: Request, res: Response) {
@@ -184,6 +185,75 @@ export class TallyAdminController {
         isValid: false,
         message: err.message,
         errorCode: 'SERVER_ERROR',
+        data: null,
+      });
+    }
+  }
+
+  static async getToken(req: Request, res: Response) {
+    try {
+      const companyId = req.companyId || (req.user as any)?.companyId || 12;
+      const userId = (req.user as any)?.userId || 0;
+      const token = await CompanyTokenService.getActiveToken(Number(companyId), Number(userId));
+      return res.status(200).json({
+        isValid: true,
+        message: 'Active Company API Token retrieved',
+        errorCode: null,
+        data: token,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        isValid: false,
+        message: err.message,
+        errorCode: 'FETCH_TOKEN_FAILED',
+        data: null,
+      });
+    }
+  }
+
+  static async generateToken(req: Request, res: Response) {
+    try {
+      const companyId = req.companyId || (req.user as any)?.companyId || 12;
+      const userId = (req.user as any)?.userId || 0;
+      const { name, expiryDays } = req.body || {};
+      const token = await CompanyTokenService.generateToken(
+        Number(companyId),
+        Number(userId),
+        name || 'TallyPrime Connector Token',
+        Number(expiryDays) || 365
+      );
+      return res.status(200).json({
+        isValid: true,
+        message: 'New Company API Token generated successfully',
+        errorCode: null,
+        data: token,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        isValid: false,
+        message: err.message,
+        errorCode: 'GENERATE_TOKEN_FAILED',
+        data: null,
+      });
+    }
+  }
+
+  static async revokeToken(req: Request, res: Response) {
+    try {
+      const companyId = req.companyId || (req.user as any)?.companyId || 12;
+      const { tokenId } = req.body || {};
+      const success = await CompanyTokenService.revokeToken(Number(companyId), tokenId ? Number(tokenId) : undefined);
+      return res.status(200).json({
+        isValid: true,
+        message: success ? 'Token successfully revoked' : 'No active token found to revoke',
+        errorCode: null,
+        data: { revoked: success },
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        isValid: false,
+        message: err.message,
+        errorCode: 'REVOKE_TOKEN_FAILED',
         data: null,
       });
     }

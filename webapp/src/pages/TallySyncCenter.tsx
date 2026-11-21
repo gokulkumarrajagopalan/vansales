@@ -15,7 +15,13 @@ import {
   Cpu,
   Clock,
   Database,
-  Search
+  Search,
+  Key,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  ShieldCheck
 } from 'lucide-react';
 
 export const TallySyncCenter: React.FC = () => {
@@ -26,6 +32,70 @@ export const TallySyncCenter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'PENDING' | 'REVIEW' | 'SETTINGS'>('PENDING');
   const [selectedQuarantineVoucher, setSelectedQuarantineVoucher] = useState<any>(null);
   const [search, setSearch] = useState('');
+
+  // Company API Token State
+  const [tokenInfo, setTokenInfo] = useState<any>(null);
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [showTokenPlain, setShowTokenPlain] = useState(false);
+  const [selectedExpiry, setSelectedExpiry] = useState<number>(365);
+  const [tokenMessage, setTokenMessage] = useState<string | null>(null);
+
+  const fetchToken = async () => {
+    try {
+      setTokenLoading(true);
+      const res = await apiClient.get('/api/v1/tally/token');
+      if (res.data?.isValid && res.data?.data) {
+        setTokenInfo(res.data.data);
+      }
+    } catch (err) {
+      console.error('[Fetch Token Error]', err);
+    } finally {
+      setTokenLoading(false);
+    }
+  };
+
+  const handleGenerateToken = async (expiryDays: number = selectedExpiry) => {
+    try {
+      setTokenLoading(true);
+      setTokenMessage(null);
+      const res = await apiClient.post('/api/v1/tally/token/generate', { expiryDays });
+      if (res.data?.isValid && res.data?.data) {
+        setTokenInfo(res.data.data);
+        setTokenMessage('✓ New Company API Token generated successfully!');
+        setTimeout(() => setTokenMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setTokenMessage('Failed to generate token: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setTokenLoading(false);
+    }
+  };
+
+  const handleRevokeToken = async () => {
+    if (!window.confirm('Are you sure you want to revoke this Company API Token? TDL synchronization for this company will stop until a new token is configured in Tally.')) {
+      return;
+    }
+    try {
+      setTokenLoading(true);
+      const res = await apiClient.post('/api/v1/tally/token/revoke');
+      if (res.data?.isValid) {
+        setTokenMessage('API Token has been revoked.');
+        await fetchToken();
+        setTimeout(() => setTokenMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setTokenMessage('Failed to revoke token: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setTokenLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedToken(true);
+    setTimeout(() => setCopiedToken(false), 2000);
+  };
 
   const fetchSyncStatus = async () => {
     try {
@@ -60,6 +130,7 @@ export const TallySyncCenter: React.FC = () => {
 
   useEffect(() => {
     fetchSyncStatus();
+    fetchToken();
   }, []);
 
   const quarantinedList = syncStatus?.quarantinedVouchers || [];
@@ -298,33 +369,142 @@ export const TallySyncCenter: React.FC = () => {
 
       {/* Tab: Settings & Telemetry */}
       {activeTab === 'SETTINGS' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 space-y-2.5">
-            <h4 className="text-xs font-semibold text-slate-900">Contract Endpoints</h4>
-            <div className="space-y-1.5 font-mono text-[11px]">
-              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex justify-between">
-                <span>POST /TallyIntegration/SalesVouchers</span>
-                <span className="text-emerald-700 font-semibold">200 OK</span>
+        <div className="space-y-4 text-xs">
+          {/* Dedicated Company API Token Card */}
+          <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/40 via-white to-slate-50 p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    Company API Token (Tally Connector)
+                    {tokenInfo?.isActive ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                        {tokenInfo?.isExpired ? 'Expired' : 'Revoked / Inactive'}
+                      </span>
+                    )}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Zero-password synchronization token strictly isolated to this company's books.
+                  </p>
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex justify-between">
-                <span>POST /TallyIntegration/ReceiptVouchers</span>
-                <span className="text-emerald-700 font-semibold">200 OK</span>
+
+              {tokenMessage && (
+                <div className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 font-semibold text-[11px] animate-fade-in">
+                  {tokenMessage}
+                </div>
+              )}
+            </div>
+
+            {/* Token Value Display Box */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
+                <span>Active Bearer Token:</span>
+                <span className="text-slate-400">
+                  {tokenInfo?.expiresAt ? `Valid until: ${new Date(tokenInfo.expiresAt).toLocaleDateString()} (${tokenInfo.daysRemaining} days left)` : ''}
+                </span>
               </div>
-              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex justify-between">
-                <span>POST /TallyIntegration/StockJournalVouchers</span>
-                <span className="text-emerald-700 font-semibold">200 OK</span>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center bg-slate-900 text-emerald-400 font-mono text-xs px-3.5 py-2.5 rounded-lg border border-slate-800 shadow-inner overflow-hidden select-all">
+                  <span className="truncate">
+                    {tokenInfo ? (showTokenPlain ? tokenInfo.plaintextToken : tokenInfo.tokenPrefix || tokenInfo.plaintextToken) : 'Loading token...'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowTokenPlain(!showTokenPlain)}
+                  className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg shadow-xs transition"
+                  title={showTokenPlain ? "Mask Token" : "Reveal Token"}
+                >
+                  {showTokenPlain ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => tokenInfo?.plaintextToken && copyToClipboard(tokenInfo.plaintextToken)}
+                  className="flex items-center gap-1.5 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-xs transition text-xs"
+                >
+                  {copiedToken ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedToken ? 'Copied!' : 'Copy'}</span>
+                </button>
               </div>
+            </div>
+
+            {/* Expiry Settings & Refresh Action */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-[11px]">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-medium">New Token Validity:</span>
+                <select
+                  value={selectedExpiry}
+                  onChange={(e) => setSelectedExpiry(Number(e.target.value))}
+                  className="px-2 py-1 bg-white border border-slate-200 rounded-md font-medium text-slate-700 shadow-xs focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value={30}>30 Days</option>
+                  <option value={90}>90 Days</option>
+                  <option value={180}>180 Days</option>
+                  <option value={365}>1 Year (365 Days) — Recommended</option>
+                </select>
+                <button
+                  onClick={() => handleGenerateToken(selectedExpiry)}
+                  disabled={tokenLoading}
+                  className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-md font-semibold shadow-xs transition disabled:opacity-50"
+                >
+                  {tokenLoading ? 'Processing...' : 'Regenerate / Refresh Token'}
+                </button>
+              </div>
+
+              {tokenInfo?.isActive && (
+                <button
+                  onClick={handleRevokeToken}
+                  disabled={tokenLoading}
+                  className="text-rose-600 hover:text-rose-700 font-semibold underline self-start sm:self-auto"
+                >
+                  Revoke Token
+                </button>
+              )}
+            </div>
+
+            {/* Telemetry info */}
+            <div className="pt-2 text-[10px] text-slate-400 flex flex-wrap gap-4 border-t border-slate-100">
+              <span>Last Used: {tokenInfo?.lastUsedAt ? new Date(tokenInfo.lastUsedAt).toLocaleString() : 'Never synced yet'}</span>
+              <span>Last Remote IP: {tokenInfo?.lastUsedIp || 'N/A'}</span>
+              <span>TDL Setting Field: <code>TalliffyApiToken</code></span>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 space-y-2.5">
-            <h4 className="text-xs font-semibold text-slate-900">Accounting Rules</h4>
-            <div className="space-y-1.5 text-[11px] text-slate-600">
-              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="font-semibold text-slate-800">Tolerance Rule:</span> Maximum &plusmn;0.20 AED rounding variance permitted to <code>Round Off (+/-)</code>.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="rounded-xl border border-slate-200/80 bg-white p-4 space-y-2.5">
+              <h4 className="text-xs font-semibold text-slate-900">Contract Endpoints</h4>
+              <div className="space-y-1.5 font-mono text-[11px]">
+                <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex justify-between">
+                  <span>POST /TallyIntegration/SalesVouchers</span>
+                  <span className="text-emerald-700 font-semibold">200 OK</span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex justify-between">
+                  <span>POST /TallyIntegration/ReceiptVouchers</span>
+                  <span className="text-emerald-700 font-semibold">200 OK</span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex justify-between">
+                  <span>POST /TallyIntegration/StockJournalVouchers</span>
+                  <span className="text-emerald-700 font-semibold">200 OK</span>
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="font-semibold text-slate-800">Tax Authority:</span> Standard 5.00% UAE VAT applied to goods.
+            </div>
+
+            <div className="rounded-xl border border-slate-200/80 bg-white p-4 space-y-2.5">
+              <h4 className="text-xs font-semibold text-slate-900">Accounting Rules</h4>
+              <div className="space-y-1.5 text-[11px] text-slate-600">
+                <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="font-semibold text-slate-800">Tolerance Rule:</span> Maximum &plusmn;0.20 AED rounding variance permitted to <code>Round Off (+/-)</code>.
+                </div>
+                <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="font-semibold text-slate-800">Tax Authority:</span> Standard 5.00% UAE VAT applied to goods.
+                </div>
               </div>
             </div>
           </div>

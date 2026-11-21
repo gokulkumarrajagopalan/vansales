@@ -15,10 +15,12 @@ const http = require('http');
 const CONFIG = {
   tallyHost: '127.0.0.1',
   tallyPort: 9000,
-  talliffyApiUrl: 'http://localhost:8080/api/tally',
+  talliffyApiUrl: 'http://66.116.232.161:8088/api/tally',
+  // Dedicated Company API Token (Zero Password required)
+  companyToken: process.env.TALLIFFY_COMPANY_TOKEN || 'tal_live_cmp12_...',
   apiKey: 'VB-API-KEY-998877',
-  userId: 'tally_connector',
-  password: 'StrongPassword123!',
+  userId: 'admin',
+  password: 'AdminPassword123!',
 };
 
 // 1. Helper: HTTP Request
@@ -59,6 +61,10 @@ async function queryTally(xmlEnvelope) {
 
 // 3. Authenticate with Talliffy API
 async function authenticateTalliffy() {
+  if (CONFIG.companyToken && !CONFIG.companyToken.includes('...')) {
+    console.log('[Talliffy Gateway] Using Dedicated Company API Token directly (Zero-password mode)...');
+    return CONFIG.companyToken;
+  }
   console.log('[Talliffy Gateway] Authenticating with Talliffy ERP API...');
   const body = JSON.stringify({
     userId: CONFIG.userId,

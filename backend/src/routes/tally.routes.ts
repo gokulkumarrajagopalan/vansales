@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TallyController } from '../controllers/tally.controller.js';
-import { authenticateTally } from '../middleware/auth.middleware.js';
+import { TallyAdminController } from '../controllers/tally-admin.controller.js';
+import { authenticateTally, authenticateJwt } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -30,5 +31,10 @@ router.post('/import/masters', authenticateTally, TallyController.importMasters)
 // 6. Direct Tally XML Export
 router.get('/export/vouchers.xml', authenticateTally, TallyController.exportVouchersXml);
 router.post('/export/vouchers.xml', authenticateTally, TallyController.exportVouchersXml);
+
+// 7. Dedicated Company API Token Management
+router.get('/token', authenticateJwt, TallyAdminController.getToken);
+router.post('/token/generate', authenticateJwt, TallyAdminController.generateToken);
+router.post('/token/revoke', authenticateJwt, TallyAdminController.revokeToken);
 
 export default router;

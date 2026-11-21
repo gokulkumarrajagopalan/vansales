@@ -41,88 +41,64 @@ Talliffy Van Sales ERP manages mobile van inventory, on-the-road sales invoices,
 
 ---
 
-## 2. Multi-Company Architecture & Authentication Flow
+## 2. Dedicated Company API Token (Zero Password — Recommended & Safest)
 
-Talliffy is a multi-company, multi-tenant ERP platform. Each enterprise company operates in complete data isolation.
+Talliffy ERP provides **Company API Tokens** for seamless, secure TallyPrime integration.
 
-When multiple companies exist in Talliffy:
-* **Each Company Admin / User** logs in with their own assigned username and password.
-* The API dynamically resolves the user's registered company and issues a scoped JWT Bearer Token.
-* All data requests (`/SalesVouchers`, `/ReceiptVouchers`, `/StockItems`, `/Customers`, `/Godowns`, `/AcknowledgeVouchers`) are strictly filtered to the authenticated company (`cmp_id`).
-* Cross-company data leaks are impossible; Company A will only ever see Company A's vouchers, stock, and customers.
-
----
-
-### 2.1 Authenticating as a Company Admin / User (Primary Method)
-
-Each company administrator connects using their own ERP credentials. If an admin manages multiple companies, they can specify the target `companyId` or `companyCode`.
-
-* **Endpoint:** `POST /api/tally/Auth`
-* **Content-Type:** `application/json`
-
-#### Request Payload:
-```json
-{
-  "username": "company_admin_user",
-  "password": "AdminPassword123!",
-  "companyId": 12,           
-  "companyCode": "30449"     
-}
-```
-*(Note: `companyId` and `companyCode` are optional. If omitted, the system automatically selects the company owned by this user).*
-
-#### Response (HTTP 200 OK):
-```json
-{
-  "isValid": true,
-  "message": "Authenticated successfully for Talliffy Demo Company (Company #12)",
-  "errorCode": null,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "companyId": 12,
-    "companyCode": "30449",
-    "companyName": "Talliffy Demo Company",
-    "userId": 5,
-    "username": "company_admin_user",
-    "role": "ADMIN",
-    "expiresInSeconds": 3600,
-    "tokenType": "Bearer"
-  }
-}
-```
+### Why Company API Tokens are Best Practice:
+1. **Zero Password Storage:** The company admin's human password is **never** entered, stored, or exposed inside Tally or TDL scripts.
+2. **Instant Multi-Company Isolation:** Each company has its own unique token (e.g. `tal_live_cmp12_...`). When the accountant opens Company 12 in Tally, they paste Token 12. When they open Company 14, they paste Token 14.
+3. **Admin Expiry & Revocation Control:** From the Talliffy Web ERP (**Tally Integration Center ➔ Settings**), the company admin can:
+   - View the active token.
+   - Choose validity duration (30 Days, 90 Days, 180 Days, or **1 Year**).
+   - Click **"Regenerate / Refresh Token"** at any time to instantly revoke the old token.
+4. **Single-Step TDL Execution:** TDL does not need a two-step login handshake. It simply makes direct calls using `Authorization: Bearer <COMPANY_API_TOKEN>`.
 
 ---
 
-### 2.2 System Connector Handshake (Alternative with Company Selection)
-
-If using a designated system connector key, specify the target `companyId` or `companyCode`:
-
-* **Endpoint:** `POST /api/tally/Auth`
-* **Content-Type:** `application/json`
-
-#### Request Payload:
-```json
-{
-  "userId": "tally_connector",
-  "password": "StrongPassword123!",
-  "apiKey": "VB-API-KEY-998877",
-  "companyId": 12
-}
-```
+### 2.1 Managing Tokens via Web ERP Interface
+Admins manage their token directly in **Talliffy Web ERP ➔ Tally Integration Center ➔ Settings**:
+* **Token Value:** `tal_live_cmp12_7f9c4b1a8d2e3f60a5b8...` (Copy button included)
+* **Expiry Indicator:** Displays remaining days and exact expiration date (e.g., *Valid until 21 Nov 2027 (365 days left)*)
+* **Regenerate Button:** Generates a new cryptographically secure token and invalidates the previous one.
+* **Revoke Button:** Instantly terminates token access if a Tally client machine is lost or retired.
 
 ---
 
-### 2.3 How to Pass the Token in Subsequent Requests
+### 2.2 Token Management REST API (For Web & Integrations)
 
-For **all** subsequent requests to pull transactions, import masters, or acknowledge entries, attach the token in the HTTP Request Header:
+* **Get Active Token:** `GET /api/v1/tally/token` (Headers: `Authorization: Bearer <USER_JWT>`)
+* **Generate / Refresh Token:** `POST /api/v1/tally/token/generate` (Payload: `{"expiryDays": 365}`)
+* **Revoke Token:** `POST /api/v1/tally/token/revoke` (Payload: `{}`)
+
+---
+
+### 2.3 How to Pass the Token in TDL Requests
+
+The TDL script attaches the Company API Token in the standard HTTP `Authorization` header on every call:
 
 ```http
-Authorization: Bearer <data.token>
+Authorization: Bearer tal_live_cmp12_7f9c4b1a8d2e3f60a5b8c9d1e2f3a4b5...
 Content-Type: application/json
 Accept: application/json
 ```
 
-Because the `companyId` is cryptographically signed inside `<data.token>`, every subsequent call automatically isolates data strictly to that company.
+The Talliffy server verifies the token hash in sub-millisecond time, validates that `expires_at > NOW()` and `is_active = true`, sets `req.companyId = 12`, and returns strictly that company's data.
+
+---
+
+### 2.4 Alternative: Dynamic Username & Password Handshake (`POST /api/tally/Auth`)
+
+If you prefer logging in via username and password instead of a dedicated API Token:
+
+```json
+{
+  "username": "company_admin_user",
+  "password": "AdminPassword123!",
+  "companyId": 12
+}
+```
+*Returns a 1-hour temporary Bearer token scoped to that company.*
 
 ---
 

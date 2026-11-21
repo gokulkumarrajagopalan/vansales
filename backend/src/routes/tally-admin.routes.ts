@@ -9,4 +9,9 @@ router.post('/sync-now', authenticateJwt, TallyAdminController.syncNow);
 router.get('/mappings', authenticateJwt, TallyAdminController.getMappings);
 router.put('/mappings', authenticateJwt, TallyAdminController.updateMapping);
 
+// Dedicated Company API Token Management
+router.get('/token', authenticateJwt, TallyAdminController.getToken);
+router.post('/token/generate', authenticateJwt, TallyAdminController.generateToken);
+router.post('/token/revoke', authenticateJwt, TallyAdminController.revokeToken);
+
 export default router;

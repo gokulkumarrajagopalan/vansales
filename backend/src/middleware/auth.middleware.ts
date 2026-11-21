@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { CompanyTokenService } from '../services/company-token.service.js';
 
 function resolveJwtSecret(): string {
   const envSecret = process.env.JWT_SECRET;
@@ -73,18 +74,58 @@ export function optionalJwt(req: Request, _res: Response, next: NextFunction) {
   next();
 }
 
-export function authenticateTally(req: Request, res: Response, next: NextFunction) {
+export async function authenticateTally(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
       isValid: false,
-      message: 'Tally connector Bearer token required',
+      message: 'Tally connector Bearer token required in Authorization header',
       errorCode: 'TALLY_AUTH_REQUIRED',
       data: null,
     });
   }
 
   const token = authHeader.split(' ')[1];
+
+  // 1. Direct Company API Token (e.g. tal_live_...)
+  if (token.startsWith('tal_live_') || !token.includes('.')) {
+    try {
+      const check = await CompanyTokenService.verifyToken(token, req.ip);
+      if (!check.isValid) {
+        const msg =
+          check.reason === 'TOKEN_REVOKED'
+            ? 'Company API token has been revoked. Please refresh the token in Talliffy Web ERP.'
+            : check.reason === 'TOKEN_EXPIRED'
+            ? 'Company API token has expired. Please generate a new token in Talliffy Web ERP.'
+            : 'Invalid Company API token';
+        return res.status(401).json({
+          isValid: false,
+          message: msg,
+          errorCode: check.reason || 'TOKEN_INVALID',
+          data: null,
+        });
+      }
+
+      const effectiveCmpId = Number(check.companyId || 12);
+      req.user = {
+        userId: 0,
+        username: `company_${effectiveCmpId}_tally`,
+        role: 'TALLY_CONNECTOR',
+        companyId: effectiveCmpId,
+      };
+      req.companyId = effectiveCmpId;
+      return next();
+    } catch (err: any) {
+      return res.status(500).json({
+        isValid: false,
+        message: 'Failed to verify Company API token: ' + err.message,
+        errorCode: 'TOKEN_VERIFICATION_FAILED',
+        data: null,
+      });
+    }
+  }
+
+  // 2. Standard JWT Bearer token
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     const allowedTallyRoles = ['TALLY_CONNECTOR', 'ADMIN', 'ACCOUNTANT', 'MANAGER', 'SUPER_ADMIN'];
